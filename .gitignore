@@ -12,6 +12,6 @@ Thumbs.db
 .buildpath
 
 # Local files
-conf/datasources.ini
 conf/recordmanager.ini
-
+import/
+log/
