@@ -127,18 +127,15 @@ class RecordManager
     public function loadFromFile($source, $files)
     {
         $this->loadSourceSettings($source);
-        if (!$this->recordXPath) {
+        if ($this->fileSplitter) {
+            $this->recordSplitter = null;
+        } else if (!$this->recordXPath) {
             $this->log->log('loadFromFile', 'recordXPath not defined', Logger::FATAL);
             throw new Exception('recordXPath not defined');
         }
         $count = 0;
         foreach (glob($files) as $file) {
             $this->log->log('loadFromFile', "Loading records from '$file' into '$source'");
-            $data = file_get_contents($file);
-            if ($data === false) {
-                throw new Exception("Could not read file '$file'");
-            }
-            
             if ($this->pretransformation) {
                 if ($this->verbose) {
                     echo "Executing pretransformation...\n";
@@ -149,7 +146,18 @@ class RecordManager
             if ($this->verbose) {
                 echo "Creating FileSplitter...\n";
             }
-            $splitter = new FileSplitter($data, $this->recordXPath, $this->oaiIDXPath);
+            $splitter = null;
+            if ($this->fileSplitter) {
+                require_once $this->fileSplitter;
+                $className = str_replace('.php', '', $this->fileSplitter);
+                $splitter  = new $className($file);
+            } else {
+                $data = file_get_contents($file);
+                if ($data === false) {
+                    throw new Exception("Could not read file '$file'");
+                }
+                $splitter = new FileSplitter($data, $this->recordXPath, $this->oaiIDXPath);
+            }
             
             if ($this->verbose) {
                 echo "Storing records...\n";
@@ -1481,6 +1489,11 @@ class RecordManager
             }
         } else {
             $this->recordSplitter = null;
+        }
+        if (isset($settings['fileSplitter'])) {
+            $this->fileSplitter = $settings['fileSplitter'];
+        } else {
+            $this->fileSplitter = null;
         }
     }
 }
