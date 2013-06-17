@@ -58,3 +58,11 @@ or
     php manage.php --func=updatesolr
 
 - See the wiki pages for more information and OAI-PMH provider setup
+
+- Install required libraries for MARC processing:
+
+    sudo pear install "channel://pear.php.net/File_MARC-0.7.1"
+    sudo pear install "channel://pear.php.net/Validate_ISPN-0.6.1"
+    sudo pear install "channel://pear.php.net/Validate-0.8.5"
+    sudo pear install "channel://pear.php.net/Structures_LinkedList-0.2.2"
+    
