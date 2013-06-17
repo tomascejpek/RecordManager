@@ -13,5 +13,5 @@ Thumbs.db
 
 # Local files
 conf/recordmanager.ini
-import/
-log/
+import/*
+log/*
