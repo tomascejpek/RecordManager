@@ -26,7 +26,7 @@ compress_records = true
 [Solr]
 ; Note that RecordManager requires that the json update method be available
 ; In Solr 4 the same update url is used for all formats, so remove /json 
-update_url = http://localhost:8080/solr/biblio/update/json
+update_url = http://localhost:8080/solr/biblio/update
 ;background_update = true
 max_commit_interval = 1000000
 username =
@@ -46,7 +46,8 @@ format_definitions = oai-pmh-formats.ini
 set_definitions = oai-pmh-sets.ini
 
 [Record Classes]
-;ead = NdlEadRecord
+marc = MarcRecord
+mzk = MzkMarcRecord
 
 [Geocoding]
 ; Please see http://wiki.openstreetmap.org/wiki/Nominatim_usage_policy before using Nominatim
@@ -69,7 +70,7 @@ solr_field = location_geo
 important_threshold = 0.8
 
 [Log]
-log_file        = /var/log/recman.log
+log_file        = ./log/recman.log
 log_level       = 4
 error_email     = 
 
