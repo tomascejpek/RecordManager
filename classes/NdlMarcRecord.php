@@ -116,7 +116,7 @@ class NdlMarcRecord extends MarcRecord
         // language override
         $data['language'] = array();
         $languages = array(substr($this->getField('008'), 35, 3));
-        $languages += $this->getFieldsSubfields('041a');
+        $languages += $this->getFieldsSubfields(array(array(MarcRecord::GET_NORMAL, '041', array('a'))), false, true, true);
         foreach ($languages as $language) {
             if (preg_match('/^\w{3}$/', $language) && $language != 'zxx' && $language != 'und') {
                 $data['language'][] = $language;
@@ -162,10 +162,10 @@ class NdlMarcRecord extends MarcRecord
         }
         $data['author'] = $this->getFieldSubfields('100abcde');
         
-        foreach ($this->getFieldsSubfields('080ab') as $classification) {
+        foreach ($this->getFieldsSubfields(array(array(MarcRecord::GET_NORMAL, '080', array('a', 'b')))) as $classification) {
             $data['classification_str_mv'][] = 'udk ' . strtolower(str_replace(' ', '', $classification));
         }
-        foreach ($this->getFieldsSubfields('050ab') as $classification) {
+        foreach ($this->getFieldsSubfields(array(array(MarcRecord::GET_NORMAL, '050', array('a', 'b')))) as $classification) {
             $data['classification_str_mv'][] = 'dlc ' . strtolower(str_replace(' ', '', $classification));
         }
         foreach ($this->getFields('084') as $field) {
@@ -182,7 +182,7 @@ class NdlMarcRecord extends MarcRecord
         }
         
         // Ebrary location
-        foreach ($this->getFieldsSubfields('035a') as $field) {
+        foreach ($this->getFieldsSubfields(array(array(MarcRecord::GET_NORMAL, '035', array('a')))) as $field) {
             if (strncmp($field, 'ebr', 3) == 0 && is_numeric(substr($field, 3))) {
                 $data['building'][] = 'Ebrary';
             }
@@ -190,13 +190,37 @@ class NdlMarcRecord extends MarcRecord
         
         // Topics
         if (strncmp($this->source, 'metalib', 7) == 0) {
-            $data['topic'] += $this->getFieldsSubfields('*653a');
-            $data['topic_facet'] += $this->getFieldsSubfields('*653a');
+            $data['topic'] += $this->getFieldsSubfields(array(array(MarcRecord::GET_BOTH, '653', array('a'))));
+            $data['topic_facet'] += $this->getFieldsSubfields(array(array(MarcRecord::GET_BOTH, '653', array('a'))));
         }
+        
+        // Original Study Number
+        $data['ctrlnum'] = array_merge($data['ctrlnum'], $this->getFieldsSubfields(array(array(MarcRecord::GET_NORMAL, '036', array('a')))));
         
         // Source
         $data['source_str_mv'] = $this->source;
-                
+
+        // ISSN
+        $data['issn'] = $this->getFieldsSubfields(array(array(MarcRecord::GET_NORMAL, '022', array('a'))));
+        foreach ($data['issn'] as &$value) {
+            $value = str_replace('-', '', $value);
+        }
+        $data['other_issn_str_mv'] = $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '440', array('x')),
+                array(MarcRecord::GET_NORMAL, '480', array('x')),
+                array(MarcRecord::GET_NORMAL, '730', array('x')),
+                array(MarcRecord::GET_NORMAL, '776', array('x'))
+            )
+        );
+        foreach ($data['other_issn_str_mv'] as &$value) {
+            $value = str_replace('-', '', $value);
+        }
+        $data['linking_issn_str_mv'] = $this->getFieldsSubfields(array(array(MarcRecord::GET_NORMAL, '022', array('l'))));
+        foreach ($data['linking_issn_str_mv'] as &$value) {
+            $value = str_replace('-', '', $value);
+        }
+        
         return $data;
     }
     

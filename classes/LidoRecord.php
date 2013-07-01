@@ -154,7 +154,7 @@ class LidoRecord extends BaseRecord
     }
     
     /**
-     * Dedup: Return record title
+     * Return record title
      *
      * @param bool   $forFiling Whether the title is to be used in filing (e.g. sorting, non-filing characters should be removed)
      * @param string $lang      Language
@@ -174,7 +174,20 @@ class LidoRecord extends BaseRecord
         if (empty($titles)) {
             return null;
         } 
-        $title = implode('; ', $titles);
+        $title = implode('; ', array_unique($titles));
+        
+        // Use description if title is the same as the work type
+        // From LIDO specs:
+        // "For objects from natural, technical, cultural history e.g. the object
+        // name given here and the object type, recorded in the object / work
+        // type element are often identical."
+        if (strcasecmp($this->getObjectWorkType(), $title) == 0) {
+            $descriptionWrapDescriptions = $this->extractArray("lido/descriptiveMetadata/objectIdentificationWrap/objectDescriptionWrap/objectDescriptionSet[not(@type) or (@type!='provenienssi')]/descriptiveNoteValue");
+            if ($descriptionWrapDescriptions) {
+                $title = implode('; ', $descriptionWrapDescriptions);
+            }
+        }
+        
         if ($forFiling) {
             $title = MetadataUtils::stripLeadingPunctuation($title);
         }
@@ -239,6 +252,11 @@ class LidoRecord extends BaseRecord
         $description = $this->extractArray('lido/descriptiveMetadata/objectIdentificationWrap/objectDescriptionWrap/objectDescriptionSet/descriptiveNoteValue');
         
         if (empty($description)) {
+            return null;
+        }
+        
+        if ($this->getTitle() == implode('; ', $description)) {
+            // We have the description already in the title, don't repeat
             return null;
         }
         
@@ -309,9 +327,8 @@ class LidoRecord extends BaseRecord
      * Return the organization name in the recordSource element
      *
      * @return array
-     * @access public
      */
-    public function getRecordSourceOrganization()
+    protected function getRecordSourceOrganization()
     {
         return $this->extractFirst('lido/administrativeMetadata/recordWrap/recordSource/legalBodyName/appellationValue');
     }
@@ -322,9 +339,8 @@ class LidoRecord extends BaseRecord
      * @param string $eventType Event type
      *
      * @return array
-     * @access public
      */
-    public function getEventNames($eventType) 
+    protected function getEventNames($eventType) 
     {
         return $this->extractArray("lido/descriptiveMetadata/eventWrap/eventSet/event[eventType/term='$eventType']/eventName/appellationValue");
     }
@@ -336,9 +352,8 @@ class LidoRecord extends BaseRecord
      * @param string $delimiter Delimiter between the dates
      * 
      * @return string
-     * @access public
      */
-    public function getEventName($event = null, $delimiter = ',')
+    protected function getEventName($event = null, $delimiter = ',')
     {
         $xpath = 'lido/descriptiveMetadata/eventWrap/eventSet/event';
         if (!empty($event)) {
@@ -359,9 +374,8 @@ class LidoRecord extends BaseRecord
      * @param string $delimiter Delimiter between the dates
      * 
      * @return string
-     * @access public
      */
-    public function getEventMethod($event = null, $delimiter = ',')
+    protected function getEventMethod($event = null, $delimiter = ',')
     {
         $xpath = 'lido/descriptiveMetadata/eventWrap/eventSet/event';
         if (!empty($event)) {
@@ -635,7 +649,7 @@ class LidoRecord extends BaseRecord
     protected function extractArray($xpath)
     {
         $elements = $this->doc->xpath($xpath);
-        if (!$elements || !count($elements)) {
+        if (!$elements) {
             return null;
         }
     
@@ -658,7 +672,7 @@ class LidoRecord extends BaseRecord
     protected function extractFirst($xpath)
     {
         $elements = $this->doc->xpath($xpath);
-        if (!$elements || !count($elements) || empty($elements[0])) {
+        if (!$elements || empty($elements[0])) {
             return null;
         }
          
@@ -707,7 +721,7 @@ class LidoRecord extends BaseRecord
         foreach ($fields as $key) {
             if (isset($data[$key]) && !empty($data[$key])) {
                 if (is_array($data[$key])) {
-                    $allfields[] = implode(' ', MetadataUtils::array_iunique($data[$key]));
+                    $allfields[] = implode(' ', array_unique($data[$key]));
                 } else {
                     $allfields[] = $data[$key];
                 }

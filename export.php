@@ -4,7 +4,7 @@
  *
  * PHP version 5
  *
- * Copyright (C) Ere Maijala 2011-2012.
+ * Copyright (C) The National Library of Finland 2011-2013.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -38,17 +38,18 @@ require_once 'cmdline.php';
 function main($argv)
 {
     $params = parseArgs($argv);
-    if (!isset($params['file']) || !isset($params['deleted']) || !isset($params['from'])) {
-        echo "Usage: export --file=... --deleted=... --from=... [...]\n\n";
+    if (!isset($params['file'])) {
+        echo "Usage: export --file=... [...]\n\n";
         echo "Parameters:\n\n";
         echo "--file              The file for records\n";
-        echo "--deleted           The file for deleted record ID's\n";
+        echo "--deleted           The file for deleted record IDs\n";
         echo "--from              From date where to start the export\n";
         echo "--verbose           Enable verbose output\n";
         echo "--quiet             Quiet, no output apart from the data\n";
         echo "--skip              Skip x records to export only a \"representative\" subset\n";
         echo "--source            Export only the given source\n";
-        echo "--single            Export single record with the given id\n\n";
+        echo "--single            Export single record with the given id\n";
+        echo "--xpath             Export only records matching the XPath expression\n\n";
         exit(1);
     }
 
@@ -58,11 +59,12 @@ function main($argv)
 
     $manager->exportRecords(
         $params['file'], 
-        $params['deleted'], 
-        $params['from'], 
+        isset($params['deleted']) ? $params['deleted'] : '', 
+        isset($params['from']) ? $params['from'] : '', 
         isset($params['skip']) ? $params['skip'] : 0, 
         isset($params['source']) ? $params['source'] : '', 
-        isset($params['single']) ? $params['single'] : ''
+        isset($params['single']) ? $params['single'] : '',
+        isset($params['xpath']) ? $params['xpath'] : ''
     );
 }
 

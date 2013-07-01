@@ -245,8 +245,8 @@ class SolrUpdater
      * @param string|null $fromDate Starting date for updates (if empty 
      *                              string, last update date stored in the database
      *                              is used and if null, all records are processed)
-     * @param string      $sourceId Source ID to update, or empty or * for all 
-     *                              source
+     * @param string      $sourceId Comma-separated list of source IDs to update, 
+     *                              or empty or * for all sources 
      * @param string      $singleId Export only a record with the given ID
      * @param bool        $noCommit If true, changes are not explicitly committed
      * @param bool        $delete   If true, records in the given $sourceId are all deleted
@@ -288,7 +288,16 @@ class SolrUpdater
                     $params['updated'] = array('$gte' => $mongoFromDate);
                 }
                 if ($sourceId) {
-                    $params['source_id'] = $sourceId;
+                    $sources = explode(',', $sourceId);
+                    if (count($sources) == 1) {
+                        $params['source_id'] = $sourceId;
+                    } else {
+                        $sourceParams = array();
+                        foreach ($sources as $source) {
+                            $sourceParams[] = array('source_id' => $source);
+                        }
+                        $params['$or'] = $sourceParams;
+                    }
                 }
                 if (!$delete) {
                     $params['update_needed'] = false;
@@ -303,7 +312,7 @@ class SolrUpdater
             $record = $this->db->record->find()->sort(array('updated' => -1))->getNext();
             $lastRecordTime = $record['updated']->sec;
             $collectionName .= "_$lastRecordTime"; 
-            
+           
             // Check if we already have a suitable collection and drop too old collections
             $collectionExists = false;
             foreach ($this->db->listCollections() as $collection) {
@@ -399,6 +408,7 @@ class SolrUpdater
                     $this->bufferedDelete((string)$child['mongo']['dedup_key']);
                     
                     ++$count;
+                    
                     $res = $this->bufferedUpdate($child['solr'], $count, $noCommit);
                     if ($res) {
                         $pc->add($count);
@@ -471,7 +481,7 @@ class SolrUpdater
             if ($delete) {
                 return;
             }
-            
+           
             $this->log->log('updateMergedRecords', "Creating individual record list (from $from)...");
             $params = array();
             if ($singleId) {
@@ -483,7 +493,16 @@ class SolrUpdater
                     $params['updated'] = array('$gte' => $mongoFromDate);
                 }
                 if ($sourceId) {
-                    $params['source_id'] = $sourceId;
+                    $sources = explode(',', $sourceId);
+                    if (count($sources) == 1) {
+                        $params['source_id'] = $sourceId;
+                    } else {
+                        $sourceParams = array();
+                        foreach ($sources as $source) {
+                            $sourceParams[] = array('source_id' => $source);
+                        }
+                        $params['$or'] = $sourceParams;
+                    }
                 }
                 $params['dedup_key'] = array('$exists' => false);
                 $params['update_needed'] = false;
@@ -503,10 +522,13 @@ class SolrUpdater
             $pc->reset();
             $this->initBufferedUpdate();
             foreach ($records as $record) {
+                $dedupSource = $this->settings[$record['source_id']]['dedup'];
                 if ($record['deleted']) {
                     $this->bufferedDelete((string)$record['_id']);
                     // Delete also any obsolete merged record having this key
-                    if (!$this->db->record->findOne(array('dedup_key' => $record['key'], '_id' => array('$ne' => $record['_id'])), array())) {
+                    // See http://blog.serverdensity.com/checking-if-a-document-exists-mongodb-slow-findone-vs-find/
+                    // for an explanation on why limit()->count().
+                    if ($dedupSource && $this->db->record->find(array('dedup_key' => $record['key'], '_id' => array('$ne' => $record['_id'])))->limit(1)->count() == 0) {
                         $this->bufferedDelete((string)$record['key']);
                     }
                     ++$count;
@@ -522,9 +544,12 @@ class SolrUpdater
                         print_r($data);
                     }
     
-                    ++$count;                       
+                    ++$count;                    
+                    
                     // Delete any obsolete merged record having this key
-                    if (!$this->db->record->findOne(array('dedup_key' => $record['key'], '_id' => array('$ne' => $record['_id'])), array())) {
+                    // See http://blog.serverdensity.com/checking-if-a-document-exists-mongodb-slow-findone-vs-find/
+                    // for an explanation on why limit()->count().
+                    if ($dedupSource && $this->db->record->find(array('dedup_key' => $record['key'], '_id' => array('$ne' => $record['_id'])))->limit(1)->count() == 0) {
                         $this->bufferedDelete((string)$record['key']);
                     }
                     $res = $this->bufferedUpdate($data, $count, $noCommit);
@@ -706,6 +731,9 @@ class SolrUpdater
             $this->settings[$source]['indexMergedParts'] = isset($settings['indexMergedParts']) ? $settings['indexMergedParts'] : true;
             $this->settings[$source]['solrTransformationXSLT'] = isset($settings['solrTransformation']) && $settings['solrTransformation'] ? new XslTransformation($this->basePath . '/transformations', $settings['solrTransformation']) : null;
             $this->settings[$source]['mappingFiles'] = array();
+            if (!isset($this->settings[$source]['dedup'])) {
+                $this->settings[$source]['dedup'] = false;
+            }
             
             foreach ($settings as $key => $value) {
                 if (substr($key, -8, 8) == '_mapping') {
