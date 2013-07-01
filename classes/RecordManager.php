@@ -78,6 +78,10 @@ class RecordManager
     protected $counts = false;
     protected $compressedRecords = true;
     
+    //storing buffer size
+   	private $bufferSize = 100;
+   	private $bufferedRecords = array();
+    
     /**
      * Constructor
      * 
@@ -134,49 +138,62 @@ class RecordManager
             throw new Exception('recordXPath not defined');
         }
         $count = 0;
-        foreach (glob($files) as $file) {
-            $this->log->log('loadFromFile', "Loading records from '$file' into '$source'");
-            if ($this->pretransformation) {
-                if ($this->verbose) {
-                    echo "Executing pretransformation...\n";
-                }
-                $data = $this->pretransform($data);
-            }
-            
-            if ($this->verbose) {
-                echo "Creating FileSplitter...\n";
-            }
-            $splitter = null;
-            if ($this->fileSplitter) {
-                require_once $this->fileSplitter;
-                $className = str_replace('.php', '', $this->fileSplitter);
-                $splitter  = new $className($file);
-            } else {
-                $data = file_get_contents($file);
-                if ($data === false) {
-                    throw new Exception("Could not read file '$file'");
-                }
-                $splitter = new FileSplitter($data, $this->recordXPath, $this->oaiIDXPath);
-            }
-            
-            if ($this->verbose) {
-                echo "Storing records...\n";
-            }
-            while (!$splitter->getEOF()) {
-                $oaiID = '';
-                $data = $splitter->getNextRecord($oaiID);
-                if ($this->verbose) {
-                    echo "Storing a record...\n";
-                }
-                $count += $this->storeRecord($oaiID, false, $data);
-                if ($this->verbose) {
-                    echo "Stored records: $count...\n";
-                }
-            }
-            $this->log->log('loadFromFile', "$count records loaded");
-        }
+        
+        try {
+	        foreach (glob($files) as $file) {
+	            $this->log->log('loadFromFile', "Loading records from '$file' into '$source'");
+	            if ($this->pretransformation) {
+	                if ($this->verbose) {
+	                    echo "Executing pretransformation...\n";
+	                }
+	                $data = $this->pretransform($data);
+	            }
+	            
+	            if ($this->verbose) {
+	                echo "Creating FileSplitter...\n";
+	            }
+	            $splitter = null;
+	            if ($this->fileSplitter) {
+	                require_once $this->fileSplitter;
+	                $className = str_replace('.php', '', $this->fileSplitter);
+	                $splitter  = new $className($file);
+	            } else {
+	                $data = file_get_contents($file);
+	                if ($data === false) {
+	                    throw new Exception("Could not read file '$file'");
+	                }
+	                $splitter = new FileSplitter($data, $this->recordXPath, $this->oaiIDXPath);
+	            }
+	            
+	            if ($this->verbose) {
+	                echo "Storing records...\n";
+	            }
+	            while (!$splitter->getEOF()) {
+	                $oaiID = '';
+	                $data = $splitter->getNextRecord($oaiID);
+	                if ($this->verbose) {
+	                    echo "Storing a record...\n";
+	                }
+	                $count += $this->storeRecord($oaiID, false, $data);
+	                if ($this->verbose) {
+	                    echo "Stored records: $count...\n";
+	                }
+	            }
+	            $this->log->log('loadFromFile', "$count records loaded");
+	        }
+        
+      
         
         $this->log->log('loadFromFile', "Total $count records loaded");
+        
+        } catch (Exception $exp) {
+        	//force saving buffer when an error occures
+        	$this->storeBufferedRecords();
+        	throw $exp;
+        } 
+       	//save buffer
+       	$this->storeBufferedRecords();
+       	
         return $count;
     }
 
@@ -635,6 +652,9 @@ class RecordManager
             } catch (Exception $e) {
                 $this->log->log('harvest', 'Exception: ' . $e->getMessage(), Logger::FATAL);
             }
+            
+            //store buffered records
+            $this->storeBufferedRecords();
         }
     }
 
@@ -765,7 +785,7 @@ class RecordManager
             }
             return $count;
         }
-
+		
         $dataArray = Array();
         if ($this->recordSplitter) {
             if ($this->verbose) {
@@ -806,7 +826,8 @@ class RecordManager
         
         // Store start time so that we can mark deleted any child records not present anymore  
         $startTime = new MongoDate();
-                
+		
+        
         $count = 0;
         $mainID = '';
         foreach ($dataArray as $data) {
@@ -875,7 +896,12 @@ class RecordManager
                 unset($dbRecord['id_keys']);
                 $dbRecord['update_needed'] = false;
             }
-            $this->db->record->save($dbRecord);
+            
+            array_push($this->bufferedRecords, $dbRecord);
+            if (count($this->bufferedRecords) % $this->bufferSize == 0) {
+            	$this->storeBufferedRecords();
+            }
+//          $this->db->record->save($dbRecord);
             ++$count;
             if (!$mainID) {
                 $mainID = $id;
@@ -1508,5 +1534,18 @@ class RecordManager
         } else {
             $this->fileSplitter = null;
         }
+    }
+    /**
+     * stores buffered records in this->$bufferedRecords into db. Works as "flush", must be called at the end of storing precudures.
+     * @param array $bufferedRecords records to be stored into database
+     */
+    private function storeBufferedRecords() {
+    	if (!isset($this->bufferedRecords)) {
+    		return;
+    	}
+    	
+    	foreach ($this->bufferedRecords as $record) {
+    		$this->db->record->save($record);
+    	}
     }
 }
