@@ -77,7 +77,7 @@ class RecordManager
     protected $indexMergedParts = true;
     protected $counts = false;
     protected $compressedRecords = true;
-    
+   
     //storing buffer size
    	private $bufferSize = 100;
    	private $bufferedRecords = array();
@@ -897,11 +897,8 @@ class RecordManager
                 $dbRecord['update_needed'] = false;
             }
             
-            array_push($this->bufferedRecords, $dbRecord);
-            if (count($this->bufferedRecords) % $this->bufferSize == 0) {
-            	$this->storeBufferedRecords();
-            }
-//          $this->db->record->save($dbRecord);
+            $this->storeIntoBuffer($dbRecord);
+           
             ++$count;
             if (!$mainID) {
                 $mainID = $id;
@@ -1059,6 +1056,7 @@ class RecordManager
                     echo "Search: '$keyPart'\n";
                 }
                 // TODO: add previously used keys here as excluding params to avoid testing records multiple times
+                
                 $params = array();
                 $params[$type] = $keyPart;
                 $params['source_id'] = array('$ne' => $this->sourceId);
@@ -1106,6 +1104,84 @@ class RecordManager
                 }
             }
         }
+        
+        
+        
+// //-----------------------
+
+//         foreach (array('isbn_keys' => $ISBNArray, 'id_keys' => $IDArray, 'title_keys' => $keyArray) as $type => $array) {
+        		
+        	 
+
+        	 
+//         	if ($this->verbose) {
+//         		echo "Search: '$keyPart'\n";
+//         	}
+
+
+
+//         	// TODO: add previously used keys here as excluding params to avoid testing records multiple times
+
+//         	$params = array();
+//         	$params[$type] = array('$in' => $array);
+//         	$params['source_id'] = array('$ne' => $this->sourceId);
+//         	$params['host_record_id'] = '';
+//         	$params['deleted'] = false;
+//         	$candidates = $this->db->record->find($params)->hint(array($type => 1));
+//         	$processed = 0;
+//         	// Go through the candidates, try to match
+//         	$matchRecord = null;
+//         	 foreach ($candidates as $candidate) {
+//                     ++$candidateCount;
+//                     // Verify the candidate has not been deduped with this source yet
+//                     if (isset($candidate['dedup_key']) && $candidate['dedup_key'] && (!isset($record['dedup_key']) || $candidate['dedup_key'] != $record['dedup_key'])) {
+//                         if ($this->db->record->find(array('dedup_key' => $candidate['dedup_key'], 'source_id' => $this->sourceId))->hasNext()) {
+//                             if ($this->verbose) {
+//                                 echo "Candidate {$candidate['_id']} already deduplicated\n";
+//                             }
+//                             continue;
+//                         }
+//                     }
+
+//                     if (++$processed > 1000 || (isset($this->tooManyCandidatesKeys["$type=$keyPart"]) && $processed > 100)) {
+//                         // Too many candidates, give up..
+//                         $this->log->log('dedupRecord', "Too many candidates for record " . $record['_id'] . " with key '$keyPart'", Logger::DEBUG);
+//                         if (count($this->tooManyCandidatesKeys) > 2000) {
+//                             array_shift($this->tooManyCandidatesKeys);
+//                         }
+//                         $this->tooManyCandidatesKeys["$type=$keyPart"] = 1;
+//                         break;
+//                     }
+
+//                     if (!isset($origRecord)) {
+//                         $origRecord = RecordFactory::createRecord($record['format'], MetadataUtils::getRecordData($record, true), $record['oai_id'], $record['source_id']);
+//                     }
+//                     if ($this->matchRecords($record, $origRecord, $candidate)) {
+//                         if ($this->verbose && ($processed > 300 || microtime(true) - $startTime > 0.7)) {
+//                             echo "Found match $type=$keyPart with candidate $processed in " . (microtime(true) - $startTime) . "\n";
+//                         }
+//                         $matchRecord = $candidate;
+//                         break 3;
+//                     }
+//                 }
+//         	if ($this->verbose && ($processed > 300 || microtime(true) - $startTime > 0.7)) {
+//         		echo "No match $type=$keyPart with $processed candidates in " . (microtime(true) - $startTime) . "\n";
+//         	}
+        
+//     }
+
+        
+//-----------------------
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
         if ($this->verbose && microtime(true) - $startTime > 0.2) {
             echo "Candidate search among $candidateCount records (" . ($matchRecord ? 'success' : 'failure') . ") completed in " . (microtime(true) - $startTime) . "\n";           
@@ -1120,6 +1196,13 @@ class RecordManager
             
             return true;
         }
+        //---
+        if (!isset($record['dedup_key']) && $record['update_needed']) {
+        	$record['update_needed'] = false;
+        	$this->storeIntoBuffer($record);        	
+        }
+        //-----
+        
         if (isset($record['dedup_key']) || $record['update_needed']) {
             if (isset($record['dedup_key'])) {
                 $this->unmarkSingleDuplicate($record['dedup_key'], $record['_id']);
@@ -1128,6 +1211,9 @@ class RecordManager
             $record['updated'] = new MongoDate();
             $record['update_needed'] = false;
             $this->db->record->save($record);
+
+            //flush buffer
+            $this->storeBufferedRecords();
         }
         
         if ($this->verbose && microtime(true) - $startTime > 0.2) {
@@ -1535,6 +1621,17 @@ class RecordManager
             $this->fileSplitter = null;
         }
     }
+    
+    /**
+     * Puts record into buffer of objects to be stored.
+     * @param $record
+     */
+    private function storeIntoBuffer($record) {
+    	array_push($this->bufferedRecords, $record);
+    	if (count($this->bufferedRecords) % $this->bufferSize == 0) {
+    		$this->storeBufferedRecords();
+    	}
+    }
     /**
      * stores buffered records in this->$bufferedRecords into db. Works as "flush", must be called at the end of storing precudures.
      * @param array $bufferedRecords records to be stored into database
@@ -1543,9 +1640,10 @@ class RecordManager
     	if (!isset($this->bufferedRecords)) {
     		return;
     	}
-    	
+  
     	foreach ($this->bufferedRecords as $record) {
     		$this->db->record->save($record);
     	}
+    	$this->bufferedRecords = array();
     }
 }
