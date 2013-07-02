@@ -901,7 +901,6 @@ class RecordManager
             if (count($this->bufferedRecords) % $this->bufferSize == 0) {
             	$this->storeBufferedRecords();
             }
-//          $this->db->record->save($dbRecord);
             ++$count;
             if (!$mainID) {
                 $mainID = $id;
