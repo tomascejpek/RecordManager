@@ -188,11 +188,11 @@ class RecordManager
         
         } catch (Exception $exp) {
         	//force saving buffer when an error occures
-        	$this->storeBufferedRecords();
+        	$this->__storeBufferedRecords();
         	throw $exp;
         } 
-       	//save buffer
-       	$this->storeBufferedRecords();
+       	//flush buffer when data source is done
+       	$this->__storeBufferedRecords();
        	
         return $count;
     }
@@ -499,6 +499,8 @@ class RecordManager
             } catch (Exception $e) {
                 $this->log->log('deduplicate', 'Exception: ' . $e->getMessage(), Logger::FATAL);
             }
+            //flush buffer after each datasource deduplication
+            $this->__storeBufferedRecords();
         }
     }
 
@@ -654,7 +656,7 @@ class RecordManager
             }
             
             //store buffered records
-            $this->storeBufferedRecords();
+            $this->__storeBufferedRecords();
         }
     }
 
@@ -897,10 +899,7 @@ class RecordManager
                 $dbRecord['update_needed'] = false;
             }
             
-            array_push($this->bufferedRecords, $dbRecord);
-            if (count($this->bufferedRecords) % $this->bufferSize == 0) {
-            	$this->storeBufferedRecords();
-            }
+            $this->__storeIntoBuffer($dbRecord);
             ++$count;
             if (!$mainID) {
                 $mainID = $id;
@@ -1119,6 +1118,16 @@ class RecordManager
             
             return true;
         }
+        
+        //---
+        //deduplication speed improvement - records that needs update only are buffered
+        if (!isset($record['dedup_key']) && $record['update_needed']) {
+            $record['updated'] = new MongoDate();
+            $record['update_needed'] = false;
+            $this->__storeIntoBuffer($record);
+        }
+        //-----
+        
         if (isset($record['dedup_key']) || $record['update_needed']) {
             if (isset($record['dedup_key'])) {
                 $this->unmarkSingleDuplicate($record['dedup_key'], $record['_id']);
@@ -1126,7 +1135,10 @@ class RecordManager
             unset($record['dedup_key']);
             $record['updated'] = new MongoDate();
             $record['update_needed'] = false;
-            $this->db->record->save($record);
+            $this->__storeIntoBuffer($record);
+
+            //flush buffer
+            $this->__storeBufferedRecords();
         }
         
         if ($this->verbose && microtime(true) - $startTime > 0.2) {
@@ -1310,10 +1322,11 @@ class RecordManager
         
         $rec1['updated'] = new MongoDate();
         $rec1['update_needed'] = false;
-        $this->db->record->save($rec1);
+        $this->__storeIntoBuffer($rec1);
         $rec2['updated'] = new MongoDate();
         $rec2['update_needed'] = false;
-        $this->db->record->save($rec2);
+        $this->__storeIntoBuffer($rec2);
+        $this->__storeBufferedRecords();
         
         if (!isset($rec1['host_record_id']) || !$rec1['host_record_id']) {
             $count = $this->dedupComponentParts($rec1);
@@ -1534,17 +1547,30 @@ class RecordManager
             $this->fileSplitter = null;
         }
     }
+    
+    /**
+     * Puts record into buffer of objects to be stored.
+     * @param $record
+     */
+    private function __storeIntoBuffer($record) {
+    	array_push($this->bufferedRecords, $record);
+    	if (count($this->bufferedRecords) % $this->bufferSize == 0) {
+    		$this->__storeBufferedRecords();
+    	}
+    }
     /**
      * stores buffered records in this->$bufferedRecords into db. Works as "flush", must be called at the end of storing precudures.
      * @param array $bufferedRecords records to be stored into database
      */
-    private function storeBufferedRecords() {
+    private function __storeBufferedRecords() {
     	if (!isset($this->bufferedRecords)) {
     		return;
     	}
-    	
+  
     	foreach ($this->bufferedRecords as $record) {
     		$this->db->record->save($record);
     	}
+    	
+    	$this->bufferedRecords = array();
     }
 }
