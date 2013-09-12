@@ -1197,39 +1197,34 @@ class MarcRecord extends BaseRecord
      * @throws Exception
      * @return void
      */
-    protected function parseXML($marc)
+    protected function parseXML($xml) 
     {
-        $xmlHead = '<?xml version';
-        if (strcasecmp(substr($marc, 0, strlen($xmlHead)), $xmlHead) === 0) {
-            $decl = substr($marc, 0, strpos($marc, '?>'));
-            if (strstr($decl, 'encoding') === false) {
-                $marc = $decl .  ' encoding="utf-8"' . substr($marc, strlen($decl));
-            }
-        } else {
-            $marc = '<?xml version="1.0" encoding="utf-8"?>' . "\n\n$marc";
-        }
-        $xml = simplexml_load_string($marc);
-        if ($xml === false) {
-            throw new Exception('MarcRecord: failed to parse from XML');
-        }
+       $document = simplexml_load_string($xml);
+       if ($xml === false) {
+             throw new Exception('MarcRecord: failed to parse from XML');
+       }
+       $document->registerXPathNamespace('marc', 'http://www.loc.gov/MARC21/slim');
 
-        $this->fields['000'] = isset($xml->leader) ? (string)$xml->leader[0] : '';
+       $this->fields['000'] = isset($xml->leader) ? (string)$xml->leader[0] : '';
+       $query = $document->xpath('marc:controlfield');
+       foreach ($query as $field) {
+           $this->fields[(string)$field['tag']][] = (string)$field[0];
+       }
 
-        foreach ($xml->controlfield as $field) {
-            $this->fields[(string)$field['tag']][] = (string)$field;
-        }
-
-        foreach ($xml->datafield as $field) {
-            $newField = array(
-                'i1' => str_pad((string)$field['ind1'], 1), 
-                'i2' => str_pad((string)$field['ind2'], 1)
-            );
-            foreach ($field->subfield as $subfield) {
-                $newField['s'][] = array((string)$subfield['code'] => (string)$subfield);
-            }
-            $this->fields[(string)$field['tag']][] = $newField;
-        }
+       $query = $document->xpath('marc:datafield');
+       foreach ($query as $field) {
+           $newField = array(
+                   'i1' => str_pad((string)$field['ind1'], 1),
+                   'i2' => str_pad((string)$field['ind2'], 1)
+           );
+           $subfieldQuery = $field->xpath('marc:subfield');
+           foreach ($subfieldQuery as $subfield) {
+               $newField['s'][] = array((string)$subfield['code'] => (string)$subfield);
+           }
+           $this->fields[(string)$field['tag']][] = $newField;
+       }
     }
+    
 
     /**
      * Parse ISO2709 exchange format
@@ -1776,5 +1771,6 @@ class MarcRecord extends BaseRecord
         }
         return array_values(array_unique($allFields));
     }
+    
 }
 
