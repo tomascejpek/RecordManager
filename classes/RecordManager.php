@@ -40,7 +40,6 @@ require_once 'XslTransformation.php';
 require_once 'MetadataUtils.php';
 require_once 'SolrUpdater.php';
 require_once 'PerformanceCounter.php';
-
 /**
  * RecordManager Class
  *
@@ -79,6 +78,7 @@ class RecordManager
     protected $indexMergedParts = true;
     protected $counts = false;
     protected $compressedRecords = true;
+    protected $enableRecordCheck = false;
     
     //storing buffer size
    	private $bufferSize = 100;
@@ -914,7 +914,6 @@ class RecordManager
                 $metadataRecord->normalize();
                 $normalizedData = $metadataRecord->serialize();
             }
-    
             $hostID = $metadataRecord->getHostRecordID();
             $id = $metadataRecord->getID();
             if (!$id) {
@@ -973,9 +972,18 @@ class RecordManager
                 unset($dbRecord['id_keys']);
                 $dbRecord['update_needed'] = false;
             }
-            
-            $this->__storeIntoBuffer($dbRecord);
-            ++$count;
+            //store record enableRecordCheck is not or record is succesfully checked
+            if ($this->enableRecordCheck) {
+                if ($metadataRecord->checkRecord() === true) {            
+                    $this->__storeIntoBuffer($dbRecord);
+                    ++$count;
+                } else {
+                    $this->log->log('StoreRecord', 'Skipping record '.$metadataRecord->getID());
+                }
+            } else {
+                $this->__storeIntoBuffer($dbRecord);
+                ++$count;
+            }
             if (!$mainID) {
                 $mainID = $id;
             }
@@ -1677,6 +1685,11 @@ class RecordManager
             $this->fileSplitter = $settings['fileSplitter'];
         } else {
             $this->fileSplitter = null;
+        }
+        if (isset($settings['enableRecordCheck'])) {
+            $this->enableRecordCheck = $settings['enableRecordCheck'] == true ? true : false;
+        } else {
+            $this->enableRecordCheck = false;
         }
     }
 
