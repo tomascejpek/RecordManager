@@ -230,14 +230,14 @@ class MarcRecord extends BaseRecord
             $east = MetadataUtils::coordinateToDecimal($eastOrig);
             $north = MetadataUtils::coordinateToDecimal($northOrig);
             $south = MetadataUtils::coordinateToDecimal($southOrig);
-
+	                
             if (!is_nan($west) && !is_nan($north)) {
                 if (!is_nan($east)) {
                     $longitude = ($west + $east) / 2;
                 } else {
                     $longitude = $west;
                 }
-                    
+
                 if (!is_nan($south)) {
                     $latitude = ($north + $south) / 2;
                 } else {
@@ -248,8 +248,19 @@ class MarcRecord extends BaseRecord
                     $logger->log('MarcRecord', "Discarding invalid coordinates $longitude,$latitude decoded from w=$westOrig, e=$eastOrig, n=$northOrig, s=$southOrig, record {$this->source}." . $this->getID(), Logger::WARNING);
                 } else {
                     $data['long_lat'] = "$longitude,$latitude";
+                    global $logger;
+                    if (!$north || $south || $east || $west) {
+                         $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." missig coordinate w=$west e=$east n=$north s=$south", Logger::WARNING);
+                    }
+                    if ($north > $south) {
+                        $data['bbox_geo'] = ($west.' '.$south.' '.$east.' '.$north);
+                    } else {
+                        $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." decoded from w=$westOrig, e=$eastOrig, n=$northOrig, s=$southOrig,decoded as w=$west e=$east n=$north s=$south" , Logger::WARNING);
+                    }
                 }
+
             }
+
         }
 
         // lccn
