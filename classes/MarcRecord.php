@@ -63,6 +63,7 @@ class MarcRecord extends BaseRecord
     protected $fields;
     protected $idPrefix = '';
     protected $source;
+    protected $settings;
 
     /**
      * Constructor
@@ -74,7 +75,12 @@ class MarcRecord extends BaseRecord
     public function __construct($data, $oaiID, $source)
     {
         parent::__construct($data, $oaiID, $source);
-
+        
+        global $datasourceSettings;
+        if (isset ($datasourceSettings[$source])) {
+            $this->settings = $datasourceSettings[$source];
+        }
+        
         $firstChar = substr($data, 0, 1);
         if ($firstChar === '{') {
             $fields = json_decode($data, true);
@@ -128,7 +134,8 @@ class MarcRecord extends BaseRecord
                 } else {
                     $this->fields = $fields['f'];
                 }
-            } 
+            }
+           
         } elseif ($firstChar === '<') {
             $this->parseXML($data);
         } else {
@@ -137,6 +144,7 @@ class MarcRecord extends BaseRecord
         if (isset($this->fields['000']) && is_array($this->fields['000'])) {
             $this->fields['000'] = $this->fields['000'][0];
         }
+     
     }
 
     /**
@@ -1273,7 +1281,15 @@ class MarcRecord extends BaseRecord
                 );                
                 $subfields = explode(MARCRecord::SUBFIELD_INDICATOR, substr($tagData, 3));
                 foreach ($subfields as $subfield) {
-                    $newField['s'][] = array($subfield[0] => substr($subfield, 1));
+                    $str = substr($subfield, 1);
+                    if (isset($this->settings) && isset($this->settings['inputEncoding'])
+                            && strtolower($this->settings['inputEncoding']) != 'utf-8' ) {
+                        $str = iconv($this->settings['inputEncoding'],"utf-8",$str);
+                        if ($str === false) {
+                            $str = substr($subfield,1);
+                        }
+                    }
+                    $newField['s'][] = array($subfield[0] => $str);
                 }
                 $this->fields[$tag][] = $newField;
             } else {
