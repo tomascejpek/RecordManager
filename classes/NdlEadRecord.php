@@ -4,7 +4,7 @@
  *
  * PHP version 5
  *
- * Copyright (C) Ere Maijala, The National Library of Finland 2012
+ * Copyright (C) The National Library of Finland 2012-2013
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -82,6 +82,14 @@ class NdlEadRecord extends EadRecord
         // Digitized?
         if ($doc->did->daogrp) {
             $data['format'] = 'digitized_' . $data['format'];
+            if ($this->doc->did->daogrp->daoloc) {
+                foreach ($this->doc->did->daogrp->daoloc as $daoloc) {
+                    if ($daoloc->attributes()->{'href'}) {
+                        $data['online_boolean'] = true;
+                        break;
+                    }
+                }
+            }
         }
         
         return $data;

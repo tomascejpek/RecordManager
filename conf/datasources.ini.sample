@@ -51,8 +51,12 @@
 ; query = "WIN=INSTITUTE"
 ; verbose = false
 ; institution = MyInst
-;
+; enableRecordCheck = true
+; inputEncoding = cp1250
+
 ; RecordManager settings:
+; enableRecordCheck     if true, every time record is about to be stored, method 'checkRecord' is called. If it returns true record is actually stored, otherwise is skipped 
+; inputEncoding			if set, this encoding is used as encoding of input records, default is utf-8 
 ; institution           The institution code mapped to the source (required)
 ; recordXPath           xpath expression used when loading records from a file to identify a single record (optional, e.g. //record)
 ; format                Record format in RecordManager
@@ -74,7 +78,10 @@
 ;                         institution          Add the institution code (default)
 ;                         source               Add the source id
 ;                         driver               Add whatever the driver returns in the institution field
-;                         none                 Don't add a top level   
+;                         none                 Don't add a top level
+; extrafields[]         An array of extra fields added to each record from this data source when sending records to Solr.
+;                       Use format fieldname:contents, e.g.
+;                         extrafields[] = sector:library   
 
 ; OAI-PMH Provider Specific settings:
 ; transformation_to_{fmt}

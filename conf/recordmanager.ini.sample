@@ -18,7 +18,9 @@ articles[] = 'Le ';
 
 [Mongo]
 ; url = mongodb://{username}:{password}@localhost
-url = mongodb://localhost
+;url = mongodb://localhost
+; Use a unix socket like below, if possible. It can be an order of magnitude faster than TCP/IP. 
+url = mongodb:///tmp/mongodb-27017.sock
 database = recman
 counts = true
 compress_records = true
@@ -50,27 +52,27 @@ marc = MarcRecord
 mzk = MzkMarcRecord
 
 [Geocoding]
-; Please see http://wiki.openstreetmap.org/wiki/Nominatim_usage_policy before using Nominatim
+// Please see http://wiki.openstreetmap.org/wiki/Nominatim_usage_policy before using Nominatim
 geocoder = NominatimGeocoder
-; Milliseconds to wait between requests (set to at least 1000 when using OpenStreetMap's servers) 
+// Milliseconds to wait between requests (set to at least 1000 when using OpenStreetMap's servers) 
 delay = 1500
-url = "http://nominatim.openstreetmap.org/search"
-email = "your@address"
-preferred_area = "-2.75,70.42,36.63,55.21"
-; Polygon simplification tolerance. GEOS and its PHP extension must be installed for simplification to be available
-; (see https://github.com/phayes/geoPHP/wiki/GEOS) 
-simplification_tolerance = 0.001
-; Maximum number of polygon elements
-simplification_max_length = 1000
+;url = "http://nominatim.openstreetmap.org/search"
+;email = "your@address"
+;preferred_area = "-2.75,70.42,36.63,55.21"
+// Polygon simplification tolerance. GEOS and its PHP extension must be installed for simplification to be available
+// (see https://github.com/phayes/geoPHP/wiki/GEOS) 
+;simplification_tolerance = 0.001
+// Maximum number of polygon elements
+;simplification_max_length = 1000
 
-; Solr field that contains the geocoding data
+// Solr field that contains the geocoding data
 solr_field = location_geo
-; Threshold governing whether a location is considered important. If such a location is found, locations with lower importance
-; are ignored. Default is 0.9.
-important_threshold = 0.8
+// Threshold governing whether a location is considered important. If such a location is found, locations with lower importance
+// are ignored. Default is 0.9.
+;important_threshold = 0.8
 
 [Log]
-log_file        = ./log/recman.log
+log_file        = /var/log/recman.log
 log_level       = 4
 error_email     = 
 

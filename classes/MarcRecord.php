@@ -63,6 +63,7 @@ class MarcRecord extends BaseRecord
     protected $fields;
     protected $idPrefix = '';
     protected $source;
+    protected $settings;
 
     /**
      * Constructor
@@ -74,7 +75,12 @@ class MarcRecord extends BaseRecord
     public function __construct($data, $oaiID, $source)
     {
         parent::__construct($data, $oaiID, $source);
-
+        
+        global $datasourceSettings;
+        if (isset ($datasourceSettings[$source])) {
+            $this->settings = $datasourceSettings[$source];
+        }
+        
         $firstChar = substr($data, 0, 1);
         if ($firstChar === '{') {
             $fields = json_decode($data, true);
@@ -128,7 +134,8 @@ class MarcRecord extends BaseRecord
                 } else {
                     $this->fields = $fields['f'];
                 }
-            } 
+            }
+           
         } elseif ($firstChar === '<') {
             $this->parseXML($data);
         } else {
@@ -137,6 +144,7 @@ class MarcRecord extends BaseRecord
         if (isset($this->fields['000']) && is_array($this->fields['000'])) {
             $this->fields['000'] = $this->fields['000'][0];
         }
+     
     }
 
     /**
@@ -230,14 +238,14 @@ class MarcRecord extends BaseRecord
             $east = MetadataUtils::coordinateToDecimal($eastOrig);
             $north = MetadataUtils::coordinateToDecimal($northOrig);
             $south = MetadataUtils::coordinateToDecimal($southOrig);
-
+	                
             if (!is_nan($west) && !is_nan($north)) {
                 if (!is_nan($east)) {
                     $longitude = ($west + $east) / 2;
                 } else {
                     $longitude = $west;
                 }
-                    
+
                 if (!is_nan($south)) {
                     $latitude = ($north + $south) / 2;
                 } else {
@@ -248,8 +256,19 @@ class MarcRecord extends BaseRecord
                     $logger->log('MarcRecord', "Discarding invalid coordinates $longitude,$latitude decoded from w=$westOrig, e=$eastOrig, n=$northOrig, s=$southOrig, record {$this->source}." . $this->getID(), Logger::WARNING);
                 } else {
                     $data['long_lat'] = "$longitude,$latitude";
+                    global $logger;
+                    if (!$north || $south || $east || $west) {
+                         $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." missig coordinate w=$west e=$east n=$north s=$south", Logger::WARNING);
+                    }
+                    if ($north > $south) {
+                        $data['bbox_geo'] = ($west.' '.$south.' '.$east.' '.$north);
+                    } else {
+                        $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." decoded from w=$westOrig, e=$eastOrig, n=$northOrig, s=$southOrig,decoded as w=$west e=$east n=$north s=$south" , Logger::WARNING);
+                    }
                 }
+
             }
+
         }
 
         // lccn
@@ -260,30 +279,7 @@ class MarcRecord extends BaseRecord
             // In case the record exceeds 99999 bytes...
             $data['fullrecord'] = $this->toXML();
         }
-        
-        // allfields
-        $allFields = array();
-        $subfieldFilter = array(
-            '650' => array('2', '6', '8'), 
-            '773' => array('6', '7', '8', 'w'), 
-            '856' => array('6', '8', 'q'), 
-            '979' => array('a')
-        );
-        foreach ($this->fields as $tag => $fields) {
-            if (($tag >= 100 && $tag < 841) || $tag == 856 || $tag == 979) {
-                foreach ($fields as $field) {
-                    $allFields[] = MetadataUtils::stripLeadingPunctuation(
-                        MetadataUtils::stripTrailingPunctuation(
-                            $this->getAllSubfields(
-                                $field,
-                                isset($subfieldFilter[$tag]) ? $subfieldFilter[$tag] : array('6', '8')
-                            )
-                        )
-                    );
-                }
-            }
-        }
-        $data['allfields'] = array_values(array_unique($allFields));
+        $data['allfields'] = $this->getAllFields();
           
         // language
         $languages = array(substr($this->getField('008'), 35, 3));
@@ -319,17 +315,6 @@ class MarcRecord extends BaseRecord
                 array(MarcRecord::GET_BOTH, '711', array('a', 'b'))
             )
         );
-        // 979cd = component part authors
-        foreach ($this->getFieldsSubfields(
-            array(
-                array(MarcRecord::GET_BOTH, '979', array('c')),
-                array(MarcRecord::GET_BOTH, '979', array('d'))
-            ),
-            false, true, true
-        ) as $field) {
-            $data['author2'][] = $field;
-        }
-        $data['author2'] = array_values(array_unique($data['author2']));
         
         $key = array_search($data['author'], $data['author2']);
         if ($key !== false) {
@@ -363,13 +348,11 @@ class MarcRecord extends BaseRecord
                         array(MarcRecord::GET_BOTH, '240', array('a')),
                         array(MarcRecord::GET_BOTH, '246', array('g')),
                         array(MarcRecord::GET_BOTH, '730', array('a', 'd', 'f', 'g', 'k', 'l', 'n', 'p', 's', 't')),
-                        array(MarcRecord::GET_BOTH, '740', array('a')),
-                        array(MarcRecord::GET_BOTH, '979', array('b')),
-                        array(MarcRecord::GET_BOTH, '979', array('e')),
+                        array(MarcRecord::GET_BOTH, '740', array('a'))
                     )
                 )
             )
-        ); // 979b and e = component part title and uniform title
+        ); 
         $data['title_old'] = $this->getFieldsSubfields(
             array(
                 array(MarcRecord::GET_BOTH, '780', array('a', 's', 't'))
@@ -576,84 +559,6 @@ class MarcRecord extends BaseRecord
         // TODO: dewey fields and OCLC numbers
           
         return $data;
-    }
-
-    /**
-     * Merge component parts to this record
-     *
-     * @param MongoCollection $componentParts Component parts to be merged
-     * 
-     * @return void
-     */
-    public function mergeComponentParts($componentParts)
-    {
-        $count = 0;
-        $parts = array();
-        foreach ($componentParts as $componentPart) {
-            $data = MetadataUtils::getRecordData($componentPart, true);
-            $marc = new MARCRecord($data, '', $this->source);
-            $title = $marc->getFieldSubfields('245', array('a', 'b', 'n', 'p'));
-            $uniTitle = $marc->getFieldSubfields('240', array('a', 'n', 'p'));
-            $additionalTitles = $marc->getFieldsSubfields(
-                array(
-                    array(MarcRecord::GET_NORMAL, '740', array('a'))
-                )
-            );
-            $authors = $marc->getFieldsSubfields(
-                array(
-                    array(MarcRecord::GET_NORMAL, '100', array('a', 'e')),
-                    array(MarcRecord::GET_NORMAL, '110', array('a', 'e'))
-                )
-            );
-            $additionalAuthors = $marc->getFieldsSubfields(
-                array(
-                    array(MarcRecord::GET_NORMAL, '700', array('a', 'e')),
-                    array(MarcRecord::GET_NORMAL, '710', array('a', 'e'))
-                )
-            );
-            $duration = $marc->getFieldsSubfields(
-                array(
-                    array(MarcRecord::GET_NORMAL, '306', array('a'))
-                )
-            );
-            $id = $componentPart['_id'];
-
-            $newField = array(
-                'i1' => ' ',
-                'i2' => ' ',
-                's' => array(
-                    array('a' => $id)
-                 )
-            );
-            if ($title) {
-                $newField['s'][] = array('b' => $title);
-            }
-            if ($authors) {
-                $newField['s'][] = array('c' => array_shift($authors));
-                foreach ($authors as $author) {
-                    $newField['s'][] = array('d' => $author);
-                }
-            }
-            foreach ($additionalAuthors as $addAuthor) {
-                $newField['s'][] = array('d' => $addAuthor);
-            }
-            if ($uniTitle) {
-                $newField['s'][] = array('e' => $uniTitle);
-            }
-            if ($duration) {
-                $newField['s'][] = array('f' => reset($duration));
-            }
-            foreach ($additionalTitles as $addTitle) {
-                $newField['s'][] = array('g' => $addTitle);
-            }
-                        
-            $key = MetadataUtils::createIdSortKey($id);
-            $parts[$key] = $newField;
-            ++$count;
-        }
-        ksort($parts);
-        $this->fields['979'] = array_values($parts);
-        return $count;
     }
 
     /**
@@ -1311,39 +1216,34 @@ class MarcRecord extends BaseRecord
      * @throws Exception
      * @return void
      */
-    protected function parseXML($marc)
+    protected function parseXML($xml) 
     {
-        $xmlHead = '<?xml version';
-        if (strcasecmp(substr($marc, 0, strlen($xmlHead)), $xmlHead) === 0) {
-            $decl = substr($marc, 0, strpos($marc, '?>'));
-            if (strstr($decl, 'encoding') === false) {
-                $marc = $decl .  ' encoding="utf-8"' . substr($marc, strlen($decl));
-            }
-        } else {
-            $marc = '<?xml version="1.0" encoding="utf-8"?>' . "\n\n$marc";
-        }
-        $xml = simplexml_load_string($marc);
-        if ($xml === false) {
-            throw new Exception('MarcRecord: failed to parse from XML');
-        }
+       $document = simplexml_load_string($xml);
+       if ($xml === false) {
+             throw new Exception('MarcRecord: failed to parse from XML');
+       }
+       $document->registerXPathNamespace('marc', 'http://www.loc.gov/MARC21/slim');
 
-        $this->fields['000'] = isset($xml->leader) ? (string)$xml->leader[0] : '';
+       $this->fields['000'] = isset($xml->leader) ? (string)$xml->leader[0] : '';
+       $query = $document->xpath('marc:controlfield');
+       foreach ($query as $field) {
+           $this->fields[(string)$field['tag']][] = (string)$field[0];
+       }
 
-        foreach ($xml->controlfield as $field) {
-            $this->fields[(string)$field['tag']][] = (string)$field;
-        }
-
-        foreach ($xml->datafield as $field) {
-            $newField = array(
-                'i1' => str_pad((string)$field['ind1'], 1), 
-                'i2' => str_pad((string)$field['ind2'], 1)
-            );
-            foreach ($field->subfield as $subfield) {
-                $newField['s'][] = array((string)$subfield['code'] => (string)$subfield);
-            }
-            $this->fields[(string)$field['tag']][] = $newField;
-        }
+       $query = $document->xpath('marc:datafield');
+       foreach ($query as $field) {
+           $newField = array(
+                   'i1' => str_pad((string)$field['ind1'], 1),
+                   'i2' => str_pad((string)$field['ind2'], 1)
+           );
+           $subfieldQuery = $field->xpath('marc:subfield');
+           foreach ($subfieldQuery as $subfield) {
+               $newField['s'][] = array((string)$subfield['code'] => (string)$subfield);
+           }
+           $this->fields[(string)$field['tag']][] = $newField;
+       }
     }
+    
 
     /**
      * Parse ISO2709 exchange format
@@ -1381,7 +1281,15 @@ class MarcRecord extends BaseRecord
                 );                
                 $subfields = explode(MARCRecord::SUBFIELD_INDICATOR, substr($tagData, 3));
                 foreach ($subfields as $subfield) {
-                    $newField['s'][] = array($subfield[0] => substr($subfield, 1));
+                    $str = substr($subfield, 1);
+                    if (isset($this->settings) && isset($this->settings['inputEncoding'])
+                            && strtolower($this->settings['inputEncoding']) != 'utf-8' ) {
+                        $str = iconv($this->settings['inputEncoding'],"utf-8",$str);
+                        if ($str === false) {
+                            $str = substr($subfield,1);
+                        }
+                    }
+                    $newField['s'][] = array($subfield[0] => $str);
                 }
                 $this->fields[$tag][] = $newField;
             } else {
@@ -1860,5 +1768,36 @@ class MarcRecord extends BaseRecord
     {
         $this->fields[$field] = $value;
     }
+    
+    /**
+     * Get an array of all fields relevant to allfields search
+     * 
+     * @return string[]
+     */
+    protected function getAllFields()
+    {
+        $allFields = array();
+        $subfieldFilter = array(
+            '650' => array('2', '6', '8'), 
+            '773' => array('6', '7', '8', 'w'), 
+            '856' => array('6', '8', 'q') 
+        );
+        foreach ($this->fields as $tag => $fields) {
+            if (($tag >= 100 && $tag < 841) || $tag == 856) {
+                foreach ($fields as $field) {
+                    $allFields[] = MetadataUtils::stripLeadingPunctuation(
+                        MetadataUtils::stripTrailingPunctuation(
+                            $this->getAllSubfields(
+                                $field,
+                                isset($subfieldFilter[$tag]) ? $subfieldFilter[$tag] : array('6', '8')
+                            )
+                        )
+                    );
+                }
+            }
+        }
+        return array_values(array_unique($allFields));
+    }
+    
 }
 

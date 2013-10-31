@@ -319,5 +319,15 @@ class BaseRecord
     public function addDedupKeyToMetadata($dedupKey)
     {
     }
+    
+    /**
+     * Decides whether this record should be stored or not. 
+     * This implementation always returns true, subclasses may override this behavior.
+     * @return true if this metadataRecord should be stored, false otherwise
+     */
+    public function checkRecord() 
+    {
+        return true;
+    }
 }
 
