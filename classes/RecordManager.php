@@ -174,7 +174,7 @@ class RecordManager
             if ($this->fileSplitter) {
                 require_once $this->fileSplitter;
                 $className = str_replace('.php', '', $this->fileSplitter);
-                if ($className == 'SignleXmlFileSplitter') {
+                if ($className == 'SingleXmlFileSplitter') {
                     $splitter = new $className(file_get_contents($file),$this->recordXPath,$this->oaiIDXPath);
                 } else {
                     $splitter  = new $className($file);
