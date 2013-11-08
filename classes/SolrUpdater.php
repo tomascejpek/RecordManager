@@ -862,7 +862,7 @@ class SolrUpdater
         }
         $settings = $this->settings[$source];
         $hiddenComponent = false;
-        if ($record['host_record_id']) {
+        if (isset($record['host_record_id'])) {
             if ($settings['componentParts'] == 'merge_all') {
                 $hiddenComponent = true;
             } elseif ($settings['componentParts'] == 'merge_non_articles' || $settings['componentParts'] == 'merge_non_earticles') {
