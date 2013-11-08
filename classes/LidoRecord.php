@@ -139,7 +139,7 @@ class LidoRecord extends BaseRecord
         $data['culture'] = $this->getCulture();
         $data['rights'] = $this->getRights();
 
-        $data['unit_daterange'] = $this->getDateRange($this->mainEvent);
+  
         $data['era_facet'] = $this->getDisplayDate($this->mainEvent);
         $data['geographic_facet'][] = $this->getDisplayPlace($this->usagePlaceEvent);
         $data['collection'] = $this->getRelatedWorkDisplayObject($this->relatedWorkRelationTypes);
@@ -149,7 +149,7 @@ class LidoRecord extends BaseRecord
             // thumbnail field is not multivalued so can only store first image url
             $data['thumbnail'] = $urls[0];
                 
-        $data['allfields'] = $this->getAllFields($data);
+        $data['allfields'] = $this->getAllFields($this->doc);
           
         return $data;
     }
@@ -707,31 +707,33 @@ class LidoRecord extends BaseRecord
     }
 
     /**
-     * Get allfields contents for Solr from the Solr data array
+     * Get all XML fields
      * 
-     * @param string[] $data   Solr data array
-     * @param string[] $fields Fields to include
+     * @param SimpleXMLDocument $xml The XML document
      * 
-     * @return string
+     * @return string[]
      */
-    protected function getAllFields($data, $fields = array(
-            'title', 'title_alt', 'description', 'format', 'author', 'topic', 
-            'material', 'measurements', 'identifier', 'culture')
-    ) {
-        $allfields = array();
-        foreach ($fields as $key) {
-            if (isset($data[$key]) && !empty($data[$key])) {
-                if (is_array($data[$key])) {
-                    $allfields[] = implode(' ', array_unique($data[$key]));
-                } else {
-                    $allfields[] = $data[$key];
-                }
+    protected function getAllFields($xml)
+    {
+        $ignoredFields = array('conceptID', 'eventType', 'legalBodyWeblink', 'linkResource', 'objectMeasurementsWrap', 'recordMetadataDate', 'recordType', 'resourceWrap', 'relatedWorksWrap', 'rightsType', 'roleActor', 'workID');
+        
+        $allFields = array();
+        foreach ($xml->children() as $tag => $field) {
+            if (in_array($tag, $ignoredFields)) {
+                continue;
+            }
+            $s = trim((string)$field);
+            if ($s) {
+                $allFields[] = $s;
+            }
+            $s = $this->getAllFields($field);
+            if ($s) {
+                $allFields = array_merge($allFields, $s);
             }
         }
-        
-        return $allfields;
+        return $allFields;
     }
-    
+        
     /**
      * Get the default language used when building the Solr array
      * 
@@ -758,6 +760,13 @@ class LidoRecord extends BaseRecord
         if (preg_match('/(\d\d\d\d) ?- (\d\d\d\d)/', $input, $matches) > 0) {
             $startDate = $matches[1];
             $endDate = $matches[2];
+        } elseif (preg_match('/(\d\d\d\d)-(\d\d?)-(\d\d?)/', $input, $matches) > 0) {
+            $year = $matches[1];
+            $month =  sprintf('%02d', $matches[2]);
+            $day = sprintf('%02d', $matches[3]);
+            $startDate = $year . '-' . $month . '-' .  $day . 'T00:00:00Z';
+            $endDate = $year . '-' . $month . '-' .  $day . 'T23:59:59Z';
+            $noprocess = true;
         } elseif (preg_match('/(\d\d?).(\d\d?).(\d\d\d\d)/', $input, $matches) > 0) {
             $year = $matches[3];
             $month =  sprintf('%02d', $matches[2]);
@@ -783,7 +792,8 @@ class LidoRecord extends BaseRecord
             $startDate = 1900 + $startDate;
         }
         if (strlen($endDate) == 2) {
-            $endDate = 1900 + $endDate;
+            $century = substr($startDate, 0, 2) . '00';
+            $endDate = $century + $endDate;
         }
          
         if (empty($noprocess)) {

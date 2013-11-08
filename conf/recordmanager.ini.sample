@@ -3,32 +3,35 @@
 ;   http://www.php.net/manual/en/timezones.php
 timezone        = "Europe/Helsinki"
 ; Abbreviations that need to be considered before removing trailing period
-abbreviations[] = "ill."
-abbreviations[] = "col."
+abbreviations = abbreviations.lst
 ; A file that contains title prefixes. If a title starts with a listed title prefix, 
 ; it will not be shortened in title_keys (for deduplication). Add frequently found 
 ; titles, such as "visual approach chart" to the list 
 ;full_title_prefixes = full-title-prefixes.lst
 ; Articles that should be removed from the beginning of a title for sorting
-articles[] = 'The ';
-articles[] = 'A ';
-articles[] = 'An ';
-articles[] = 'El ';
-articles[] = 'Le ';
+articles = articles.lst
 
 [Mongo]
 ; url = mongodb://{username}:{password}@localhost
 ;url = mongodb://localhost
 ; Use a unix socket like below, if possible. It can be an order of magnitude faster than TCP/IP. 
 url = mongodb:///tmp/mongodb-27017.sock
+; Database to use
 database = recman
-counts = true
-compress_records = true
+; Whether to ask MongoDB for counts of records to be processed. Can be really slow.
+counts = false
+; Whether to compress record data in MongoDB. Saves space but slows down the operation. 
+; Not very useful when using TokuMX instead of plain MongoDB.
+compress_records = false
+; Connection timeout in milliseconds. Might be needed e.g. during Solr update if the map/reduce takes a long time
+; connect_timeout = 12000000
+; Cursor timeout. Might be needed if a cursor doesn't live long enough for the whole operation to complete.
+; cursor_timeout = 12000000
 
 [Solr]
 ; Note that RecordManager requires that the json update method be available
 ; In Solr 4 the same update url is used for all formats, so remove /json 
-update_url = http://localhost:8080/solr/biblio/update
+update_url = http://localhost:8080/solr/biblio/update/json
 ;background_update = true
 max_commit_interval = 1000000
 username =
@@ -48,27 +51,26 @@ format_definitions = oai-pmh-formats.ini
 set_definitions = oai-pmh-sets.ini
 
 [Record Classes]
-marc = MarcRecord
-mzk = MzkMarcRecord
+;ead = NdlEadRecord
 
 [Geocoding]
-// Please see http://wiki.openstreetmap.org/wiki/Nominatim_usage_policy before using Nominatim
+; Please see http://wiki.openstreetmap.org/wiki/Nominatim_usage_policy before using Nominatim
 geocoder = NominatimGeocoder
-// Milliseconds to wait between requests (set to at least 1000 when using OpenStreetMap's servers) 
+; Milliseconds to wait between requests (set to at least 1000 when using OpenStreetMap's servers)
 delay = 1500
 ;url = "http://nominatim.openstreetmap.org/search"
 ;email = "your@address"
 ;preferred_area = "-2.75,70.42,36.63,55.21"
-// Polygon simplification tolerance. GEOS and its PHP extension must be installed for simplification to be available
-// (see https://github.com/phayes/geoPHP/wiki/GEOS) 
+; Polygon simplification tolerance. GEOS and its PHP extension must be installed for simplification to be available
+; (see https://github.com/phayes/geoPHP/wiki/GEOS)
 ;simplification_tolerance = 0.001
-// Maximum number of polygon elements
+; Maximum number of polygon elements
 ;simplification_max_length = 1000
 
-// Solr field that contains the geocoding data
+; Solr field that contains the geocoding data
 solr_field = location_geo
-// Threshold governing whether a location is considered important. If such a location is found, locations with lower importance
-// are ignored. Default is 0.9.
+; Threshold governing whether a location is considered important. If such a location is found, locations with lower importance
+; are ignored. Default is 0.9.
 ;important_threshold = 0.8
 
 [Log]

@@ -26,6 +26,8 @@
  * @link     https://github.com/KDK-Alli/RecordManager
  */
 
+declare(ticks = 1);
+
 require_once 'BaseRecord.php';
 require_once 'MetadataUtils.php';
 require_once 'PerformanceCounter.php';
@@ -56,6 +58,7 @@ class SolrUpdater
     protected $eArticleFormats;
     protected $allArticleFormats;
     protected $httpPid = null;
+    protected $terminate;
     
     protected $commitInterval;
     protected $maxUpdateRecords;
@@ -128,6 +131,19 @@ class SolrUpdater
         $this->loadDatasources();
     }
 
+    /**
+     * Catch the SIGINT signal and signal the main thread to terminate
+     *
+     * @param int $signal Signal ID
+     *
+     * @return void
+     */
+    public function sigIntHandler($signal)
+    {
+        $this->terminate = true;
+        echo "Termination requested\n";
+    }
+    
     /**
      * Update Solr index (individual records)
      * 
@@ -257,6 +273,15 @@ class SolrUpdater
     {
         global $configArray;
         
+        // Install a signal handler so that we can exit cleanly if interrupted
+        unset($this->terminate);
+        if (function_exists('pcntl_signal')) {
+            pcntl_signal(SIGINT, array($this, 'sigIntHandler'));
+            $this->log->log('updateMergedRecords', 'Interrupt handler set');
+        } else {
+            $this->log->log('updateMergedRecords', 'Could not set an interrupt handler -- pcntl not available');
+        }
+        
         try {
             $needCommit = false;
 
@@ -302,12 +327,12 @@ class SolrUpdater
                 if (!$delete) {
                     $params['update_needed'] = false;
                 }
-                $params['dedup_id'] = array('$exists' => true);
+                $params['dedup_key'] = array('$exists' => true);
             }
             
             $collectionName = 'mr_record_' . md5(json_encode($params));
             if (isset($fromDate)) {
-                $collectionName .= '_' . date('Ymd', strtotime($fromDate));
+                $collectionName .= "_$fromDate";
             }
             $record = $this->db->record->find()->sort(array('updated' => -1))->getNext();
             $lastRecordTime = $record['updated']->sec;
@@ -335,25 +360,36 @@ class SolrUpdater
             if (!$collectionExists) {            
                 $this->log->log('updateMergedRecords', "Creating merged record list $collectionName (from $from, stage 1/2)");
                 
-                $map = new MongoCode("function() { emit(this.dedup_id, 1); }");
-                $reduce = new MongoCode("function(k, vals) { return vals.length; }");
-                $mr = $this->db->command(
-                    array(
-                        'mapreduce' => 'record', 
-                        'map' => $map,
-                        'reduce' => $reduce,
-                        'out' => array('replace' => $collectionName),
-                        'query' => $params,
-                    ),
-                    array(
-                        'timeout' => 3000000
-                    )
-                );
-                if (!$mr['ok']) {
-                    $this->log->log('updateMergedRecords', "Mongo map/reduce failed: " . print_r($mr, true), Logger::FATAL);
-                    $this->db->dropCollection($collectionName);
-                    return; 
+                $records = $this->db->record->find($params, array('dedup_id' => 1));
+                $prevId = null;
+                $collection = $this->db->selectCollection($collectionName . '_tmp');
+                $collection->drop();
+                $count = 0;
+                $totalMergeCount = 0;
+                $batch = array();
+                foreach ($records as $record) {
+                    if (isset($this->terminate)) {
+                        $this->log->log('updateMergedRecords', 'Termination upon request');
+                        $collection->drop();
+                        exit(1);
+                    }
+                    $id = $record['dedup_id'];
+                    if (!isset($prevId) || $prevId != $id) {
+                        $batch[] = array('_id' => $id);
+                        ++$totalMergeCount;
+                        if (++$count % 10000 == 0) {
+                            // We need continueOnError to ignore duplicate IDs
+                            $collection->batchInsert($batch, array('continueOnError' => true));
+                            $batch = array();
+                            $this->log->log('updateMergedRecords', "$count records processed");
+                        }
+                    }
+                    $prevId = $id;
                 }
+                if ($batch) {
+                    $collection->batchInsert($batch);
+                }
+                $this->log->log('updateMergedRecords', "$count records processed");
                 
                 // Add dedup records by date (those that were not added by record date)
                 if (!isset($mongoFromDate)) {
@@ -366,29 +402,52 @@ class SolrUpdater
                     } else {
                         $dedupParams['changed'] = array('$gte' => $mongoFromDate);
                     }
-                    $map = new MongoCode("function() { emit(this._id, 1); }");
-                    $reduce = new MongoCode("function(k, vals) { return vals.length; }");
-                    $mr = $this->db->command(
+                    
+                    $records = $this->db->dedup->find($dedupParams, array('_id' => 1));
+                    $count = 0;
+                    $batch = array();
+                    foreach ($records as $record) {
+                        if (isset($this->terminate)) {
+                            $this->log->log('updateMergedRecords', 'Termination upon request');
+                            $collection->drop();
+                            exit(1);
+                        }
+                        $id = $record['_id'];
+                        if (!isset($prevId) || $prevId != $id) {
+                            $batch[] = array('_id' => $id);
+                            ++$totalMergeCount;
+                            if (++$count % 10000 == 0) {
+                                // We need continueOnError to ignore duplicate IDs
+                                $collection->batchInsert($batch, array('continueOnError' => true));
+                                $batch = array();
+                                $this->log->log('updateMergedRecords', "$count merge records processed");
+                            }
+                        }
+                        $prevId = $id;
+                    }
+                    if ($batch) {
+                        $collection->batchInsert($batch);
+                    }
+                    $this->log->log('updateMergedRecords', "$count merge records processed");
+                }
+                if ($totalMergeCount > 0) {
+                    $mongo = new Mongo($configArray['Mongo']['url']);
+                    $dbName = $configArray['Mongo']['database'];
+                    $res = $mongo->admin->command(
                         array(
-                            'mapreduce' => 'dedup', 
-                            'map' => $map,
-                            'reduce' => $reduce,
-                            'out' => array('merge' => $collectionName),
-                            'query' => $dedupParams ? $dedupParams : null,
-                        ),
-                        array(
-                            'timeout' => 3000000
+                            'renameCollection' => $dbName . '.' . $collectionName . '_tmp',
+                            'to' => $dbName . '.' . $collectionName
                         )
                     );
-                    if (!$mr['ok']) {
-                        $this->log->log('updateMergedRecords', "Mongo map/reduce failed: " . print_r($mr, true), Logger::FATAL);
-                        $this->db->dropCollection($collectionName);
-                        return; 
+                    if (!$res['ok']) {
+                        throw new Exception("Renaming collection failed: " . print_r($res, true));
                     }
                 }
             } else {
                 $this->log->log('updateMergedRecords', "Using existing merged record list $collectionName");
             }
+            pcntl_signal(SIGINT, SIG_DFL);
+            
             $keys = $this->db->{$collectionName}->find();
             $keys->immortal(true);
             $count = 0;
@@ -407,6 +466,10 @@ class SolrUpdater
                 }
 
                 $dedupRecord = $this->db->dedup->findOne(array('_id' => $key['_id']));
+                if (empty($dedupRecord)) {
+                    $this->log->log('updateMergedRecords', "Dedup record with id {$key['_id']} missing", Logger::ERROR);
+                    continue;
+                }
                 if ($dedupRecord['deleted']) {
                     $this->bufferedDelete($dedupRecord['_id']);
                     ++$count;
@@ -1007,7 +1070,7 @@ class SolrUpdater
                     continue;
                 }
                 if (is_array($field)) {
-                    $all[] = implode(' ', $field);
+                    $all = array_merge($all, $field);
                 } else {
                     $all[] = $field;
                 }
@@ -1128,7 +1191,7 @@ class SolrUpdater
      */
     protected function mergeRecords($merged, $add)
     {
-        $checkedFields = array('title_auth', 'title', 'title_short', 'title_full', 'title_sort', 'author', 'author-letter');
+        $checkedFields = array('title', 'title_short', 'title_full', 'title_sort', 'author', 'author-letter');
         
         if (empty($merged)) {
             $merged = $add;
@@ -1209,11 +1272,12 @@ class SolrUpdater
         $this->request->setHeader('Content-Type', 'application/json');
         $this->request->setBody($body);
 
-        for ($try = 1; $try <= 5; $try++) {
+        $maxTries = 15;
+        for ($try = 1; $try <= $maxTries; $try++) {
             try {
                 $response = $this->request->send();
             } catch (Exception $e) {
-                if ($try < 5) {
+                if ($try < $maxTries) {
                     $this->log->log(
                         'solrRequest',
                         'Solr server request failed (' . $e->getMessage() . '), retrying in 60 seconds...', 
@@ -1235,7 +1299,7 @@ class SolrUpdater
                     throw $e;
                 }
             }
-            if ($try < 5) {
+            if ($try < $maxTries) {
                 $code = $response->getStatus();
                 if ($code >= 300) {
                     $this->log->log(
@@ -1309,9 +1373,6 @@ class SolrUpdater
     {
         $result = false;
         
-        if (isset($data['allfields']) && is_array($data['allfields'])) {
-            $data['allfields'] = implode(' ', $data['allfields']);
-        }
         $jsonData = json_encode($data);
         if ($this->buffered > 0) {
             $this->buffer .= ",\n";

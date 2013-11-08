@@ -38,22 +38,33 @@ require_once 'cmdline.php';
 function main($argv)
 {
     $params = parseArgs($argv);
+    applyConfigOverrides($params);
     if (!isset($params['source'])) {
-        echo "Usage: harvest --source=... [...]\n\n";
-        echo "Parameters:\n\n";
-        echo "--source            Repository id ('*' for all, separate multiple sources with commas)\n";
-        echo "--from              Override harvesting start date\n";
-        echo "--until             Override harvesting end date\n";
-        echo "--all               Harvest from beginning (overrides --from)\n";
-        echo "--verbose           Enable verbose output\n";
-        echo "--override          Override initial resumption token (e.g. to resume failed connection)\n\n";
+        echo <<<EOT
+Usage: $argv[0] --source=... [...]
+
+Parameters:
+            
+--source            Repository id ('*' for all, separate multiple sources with commas)
+--exclude           Repository id's to exclude when using '*' for source (separate multiple sources with commas)
+--from              Override harvesting start date
+--until             Override harvesting end date
+--all               Harvest from beginning (overrides --from)
+--verbose           Enable verbose output
+--override          Override initial resumption token (e.g. to resume failed connection)
+--reharvest[=date]  This is a full reharvest, delete all records that were not received during the harvesting (or were modified before [date]). Implies --all.
+--config.section.name=value 
+                    Set configuration directive to given value overriding any setting in recordmanager.ini
+
+
+EOT;
         exit(1);
     }
 
     $manager = new RecordManager(true);
     $manager->verbose = isset($params['verbose']) ? $params['verbose'] : false;
     $from = isset($params['from']) ? $params['from'] : null;
-    if (isset($params['all'])) {
+    if (isset($params['all']) || isset($params['reharvest'])) {
         $from = '-';
     }
     foreach (explode(',', $params['source']) as $source) {
@@ -61,7 +72,9 @@ function main($argv)
             $source, 
             $from, 
             isset($params['until']) ? $params['until'] : null, 
-            isset($params['override']) ? urldecode($params['override']) : ''
+            isset($params['override']) ? urldecode($params['override']) : '',
+            isset($params['exclude']) ? $params['exclude'] : null,
+            isset($params['reharvest']) ? $params['reharvest'] : ''
         );
     }
 }

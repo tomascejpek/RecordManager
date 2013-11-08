@@ -243,7 +243,8 @@ class NdlMarcRecord extends MarcRecord
         
         // Source
         $data['source_str_mv'] = $this->source;
-
+        $data['datasource_str_mv'] = $this->source;
+        
         // ISSN
         $data['issn'] = $this->getFieldsSubfields(array(array(MarcRecord::GET_NORMAL, '022', array('a'))));
         foreach ($data['issn'] as &$value) {
@@ -268,9 +269,25 @@ class NdlMarcRecord extends MarcRecord
         $fields = $this->getFields('856');
         foreach ($fields as $field) {
             $ind2 = $this->getIndicator($field, 2);
-            if ($ind2 == '0' || $ind2 == '1') {
+            $sub3 = $this->getSubfield($field, 3);
+            if (($ind2 == '0' || $ind2 == '1') && !$sub3) {
+                $url = $this->getSubfield($field, 'u');
+                if (!$url) {
+                    global $logger;
+                    $logger->log('NdlMarcRecord', "Missing URL (subfield u) in 856 field, record {$this->source}." . $this->getID(), Logger::WARNING);
+                    continue;
+                }
                 $data['online_boolean'] = true;
-                break;
+                $linkText = $this->getSubfield($field, 'y');
+                if (!$linkText) {
+                    $linkText = $this->getSubfield($field, 'z');
+                }
+                $link = array(
+                    'url' => $this->getSubfield($field, 'u'),
+                    'text' => $linkText,
+                    'source' => $this->source
+                ); 
+                $data['online_urls_str_mv'][] = json_encode($link);
             }
         }
         
@@ -515,20 +532,28 @@ class NdlMarcRecord extends MarcRecord
             '856' => array('6', '8', 'q'), 
             '979' => array('a')
         );
+        $allFields = array();
         foreach ($this->fields as $tag => $fields) {
-            if (($tag >= 100 && $tag < 841) || $tag == 856 || $tag == 979) {
+            if (($tag >= 100 && $tag < 841) || $tag == 856 || $tag == 880 || $tag == 979) {
                 foreach ($fields as $field) {
-                    $allFields[] = MetadataUtils::stripLeadingPunctuation(
-                        MetadataUtils::stripTrailingPunctuation(
-                            $this->getAllSubfields(
-                                $field,
-                                isset($subfieldFilter[$tag]) ? $subfieldFilter[$tag] : array('6', '8')
-                            )
-                        )
+                    $subfields = $this->getAllSubfields(
+                        $field,
+                        isset($subfieldFilter[$tag]) ? $subfieldFilter[$tag] : array('6', '8')
                     );
+                    if ($subfields) {
+                        $allFields = array_merge($allFields, $subfields);
+                    }
                 }
             }
         }
+        $allFields = array_map(
+            function($str) {
+                return MetadataUtils::stripLeadingPunctuation(
+                    MetadataUtils::stripTrailingPunctuation($str)
+                );
+            },
+            $allFields
+        );
         return array_values(array_unique($allFields));
     }
 }

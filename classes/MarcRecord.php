@@ -63,7 +63,6 @@ class MarcRecord extends BaseRecord
     protected $fields;
     protected $idPrefix = '';
     protected $source;
-    protected $settings;
 
     /**
      * Constructor
@@ -75,12 +74,7 @@ class MarcRecord extends BaseRecord
     public function __construct($data, $oaiID, $source)
     {
         parent::__construct($data, $oaiID, $source);
-        
-        global $datasourceSettings;
-        if (isset ($datasourceSettings[$source])) {
-            $this->settings = $datasourceSettings[$source];
-        }
-        
+
         $firstChar = substr($data, 0, 1);
         if ($firstChar === '{') {
             $fields = json_decode($data, true);
@@ -134,8 +128,7 @@ class MarcRecord extends BaseRecord
                 } else {
                     $this->fields = $fields['f'];
                 }
-            }
-           
+            } 
         } elseif ($firstChar === '<') {
             $this->parseXML($data);
         } else {
@@ -144,7 +137,6 @@ class MarcRecord extends BaseRecord
         if (isset($this->fields['000']) && is_array($this->fields['000'])) {
             $this->fields['000'] = $this->fields['000'][0];
         }
-     
     }
 
     /**
@@ -238,14 +230,14 @@ class MarcRecord extends BaseRecord
             $east = MetadataUtils::coordinateToDecimal($eastOrig);
             $north = MetadataUtils::coordinateToDecimal($northOrig);
             $south = MetadataUtils::coordinateToDecimal($southOrig);
-	                
+
             if (!is_nan($west) && !is_nan($north)) {
                 if (!is_nan($east)) {
                     $longitude = ($west + $east) / 2;
                 } else {
                     $longitude = $west;
                 }
-
+                    
                 if (!is_nan($south)) {
                     $latitude = ($north + $south) / 2;
                 } else {
@@ -266,9 +258,7 @@ class MarcRecord extends BaseRecord
                         $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." decoded from w=$westOrig, e=$eastOrig, n=$northOrig, s=$southOrig,decoded as w=$west e=$east n=$north s=$south" , Logger::WARNING);
                     }
                 }
-
             }
-
         }
 
         // lccn
@@ -335,7 +325,7 @@ class MarcRecord extends BaseRecord
             true
         );
           
-        $data['title'] = $data['title_auth'] = $this->getTitle();
+        $data['title'] = $this->getTitle();
         $data['title_sub'] = $this->getFieldSubfields('245', array('b', 'n', 'p'));
         $data['title_short'] = $this->getFieldSubfields('245', array('a'));
         $data['title_full'] = $this->getFieldSubfields('245', array('a', 'b', 'c', 'f', 'g', 'h', 'k', 'n', 'p', 's'));
@@ -1216,7 +1206,41 @@ class MarcRecord extends BaseRecord
      * @throws Exception
      * @return void
      */
-    protected function parseXML($xml) 
+    protected function parseXML($marc)
+    {
+        $xmlHead = '<?xml version';
+        if (strcasecmp(substr($marc, 0, strlen($xmlHead)), $xmlHead) === 0) {
+            $decl = substr($marc, 0, strpos($marc, '?>'));
+            if (strstr($decl, 'encoding') === false) {
+                $marc = $decl .  ' encoding="utf-8"' . substr($marc, strlen($decl));
+            }
+        } else {
+            $marc = '<?xml version="1.0" encoding="utf-8"?>' . "\n\n$marc";
+        }
+        $xml = simplexml_load_string($marc);
+        if ($xml === false) {
+            throw new Exception('MarcRecord: failed to parse from XML');
+        }
+
+        $this->fields['000'] = isset($xml->leader) ? (string)$xml->leader[0] : '';
+
+        foreach ($xml->controlfield as $field) {
+            $this->fields[(string)$field['tag']][] = (string)$field;
+        }
+
+        foreach ($xml->datafield as $field) {
+            $newField = array(
+                'i1' => str_pad((string)$field['ind1'], 1), 
+                'i2' => str_pad((string)$field['ind2'], 1)
+            );
+            foreach ($field->subfield as $subfield) {
+                $newField['s'][] = array((string)$subfield['code'] => (string)$subfield);
+            }
+            $this->fields[(string)$field['tag']][] = $newField;
+        }
+    }
+/*
+protected function parseXML($xml) 
     {
        $document = simplexml_load_string($xml);
        if ($xml === false) {
@@ -1243,7 +1267,7 @@ class MarcRecord extends BaseRecord
            $this->fields[(string)$field['tag']][] = $newField;
        }
     }
-    
+*/
 
     /**
      * Parse ISO2709 exchange format
@@ -1281,15 +1305,7 @@ class MarcRecord extends BaseRecord
                 );                
                 $subfields = explode(MARCRecord::SUBFIELD_INDICATOR, substr($tagData, 3));
                 foreach ($subfields as $subfield) {
-                    $str = substr($subfield, 1);
-                    if (isset($this->settings) && isset($this->settings['inputEncoding'])
-                            && strtolower($this->settings['inputEncoding']) != 'utf-8' ) {
-                        $str = iconv($this->settings['inputEncoding'],"utf-8",$str);
-                        if ($str === false) {
-                            $str = substr($subfield,1);
-                        }
-                    }
-                    $newField['s'][] = array($subfield[0] => $str);
+                    $newField['s'][] = array($subfield[0] => substr($subfield, 1));
                 }
                 $this->fields[$tag][] = $newField;
             } else {
@@ -1627,10 +1643,10 @@ class MarcRecord extends BaseRecord
                         }
                     }
                 }
-                if (($type == MarcRecord::GET_ALT || $type == MarcRecord::GET_BOTH) && isset($this->fields['866']) && ($origSub6 = $this->getSubfield($field, '6'))) {
+                if (($type == MarcRecord::GET_ALT || $type == MarcRecord::GET_BOTH) && isset($this->fields['880']) && ($origSub6 = $this->getSubfield($field, '6'))) {
                     // Handle alternate script field
                     $findSub6 = "$tag-" . substr($origSub6, 4, 2);
-                    foreach ($this->fields['866'] as $field) {
+                    foreach ($this->fields['880'] as $field) {
                         if (strncmp($this->getSubfield($field, '6'), $findSub6, 6) != 0) {
                             continue;
                         }
@@ -1735,7 +1751,7 @@ class MarcRecord extends BaseRecord
      * @param array $field  Field
      * @param array $filter Optional filter to exclude subfield
      * 
-     * @return string Concatenated subfields (space-separated)
+     * @return string[] All subfields
      */
     protected function getAllSubfields($field, $filter = null)
     {
@@ -1743,15 +1759,12 @@ class MarcRecord extends BaseRecord
             return '';
         }
         
-        $subfields = '';
+        $subfields = array();
         foreach ($field['s'] as $subfield) {
             if (isset($filter) && in_array(key($subfield), $filter)) {
                 continue;
             }
-            if ($subfields) {
-                $subfields .= ' ';
-            }
-            $subfields .= current($subfield);
+            $subfields[] = current($subfield);
         }
         return $subfields;
     }
@@ -1782,22 +1795,29 @@ class MarcRecord extends BaseRecord
             '773' => array('6', '7', '8', 'w'), 
             '856' => array('6', '8', 'q') 
         );
+        $allFields = array();
         foreach ($this->fields as $tag => $fields) {
-            if (($tag >= 100 && $tag < 841) || $tag == 856) {
+            if (($tag >= 100 && $tag < 841) || $tag == 856 || $tag == 880) {
                 foreach ($fields as $field) {
-                    $allFields[] = MetadataUtils::stripLeadingPunctuation(
-                        MetadataUtils::stripTrailingPunctuation(
-                            $this->getAllSubfields(
-                                $field,
-                                isset($subfieldFilter[$tag]) ? $subfieldFilter[$tag] : array('6', '8')
-                            )
-                        )
+                    $subfields = $this->getAllSubfields(
+                        $field,
+                        isset($subfieldFilter[$tag]) ? $subfieldFilter[$tag] : array('6', '8')
                     );
+                    if ($subfields) {
+                        $allFields = array_merge($allFields, $subfields);
+                    }
                 }
             }
         }
+        $allFields = array_map(
+            function($str) {
+                return MetadataUtils::stripLeadingPunctuation(
+                    MetadataUtils::stripTrailingPunctuation($str)
+                );
+            },
+            $allFields
+        );
         return array_values(array_unique($allFields));
     }
-    
 }
 

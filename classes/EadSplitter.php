@@ -4,7 +4,7 @@
  *
  * PHP version 5
  *
- * Copyright (C) The National Library of Finland 2012
+ * Copyright (C) The National Library of Finland 2012-2013
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2,
@@ -144,7 +144,7 @@ class EadSplitter
                 if (isset($original->{'add-data'})) {
                     $parentID = (string)$original->{'add-data'}->attributes()->identifier;
                 } else {
-                    $parentID = (string)$parentDid->unitid->attributes()->identifier;
+                    $parentID = urlencode($parentDid->unitid->attributes()->identifier ? (string)$parentDid->unitid->attributes()->identifier : (string)$parentDid->unitid);
                 }
                 if ($parentID != $this->archiveId) {
                     $parentID = $this->archiveId . '_' . $parentID;
