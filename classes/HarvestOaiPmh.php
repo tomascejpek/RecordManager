@@ -64,6 +64,7 @@ class HarvestOaiPmh
     protected $resumptionToken = '';  // Override the first harvest request
     protected $transformation = null; // Transformation applied to the OAI-PMH responses before processing
     protected $serverDate = null;     // Date received from server via Identify command. Used to set the last harvest date
+    protected $ignoreNoRecordsMatch = false; // Whether to ignore noRecordsMatch error when harvesting (broken sources may report an error even with a valid resumptionToken)  
 
     /**
      * Constructor.
@@ -129,11 +130,14 @@ class HarvestOaiPmh
             $this->transformation = new XSLTProcessor();
             $this->transformation->importStylesheet($style);
         }
+        if (isset($settings['ignoreNoRecordsMatch'])) {
+            $this->ignoreNoRecordsMatch = $settings['ignoreNoRecordsMatch'];
+        }
         
         $this->message('Identifying server');
         $response = $this->sendRequest('Identify');
         if ($this->granularity == 'auto') {
-            $this->granularity = $this->getSingleNode($this->getSingleNode($response, 'Identify'), 'granularity')->nodeValue;
+            $this->granularity = trim($this->getSingleNode($this->getSingleNode($response, 'Identify'), 'granularity')->nodeValue);
             $this->message("Detected date granularity: {$this->granularity}");
         }
         $this->serverDate = $this->normalizeDate($this->getSingleNode($response, 'responseDate')->nodeValue);
@@ -336,11 +340,13 @@ class HarvestOaiPmh
         }
 
         // Perform request and throw an exception on error:
-        for ($try = 1; $try <= 5; $try++) {
+        $maxTries = 5;
+        for ($try = 1; $try <= $maxTries; $try++) {
+            $this->message("Sending request: $urlStr", true);
             try {
                 $response = $request->send();
             } catch (Exception $e) {
-                if ($try < 5) {
+                if ($try < $maxTries) {
                     $this->message(
                         "Request '$urlStr' failed (" . $e->getMessage() . "), retrying in 30 seconds...", 
                         false, 
@@ -351,7 +357,7 @@ class HarvestOaiPmh
                 }
                 throw $e;
             }
-            if ($try < 5) {
+            if ($try < $maxTries) {
                 $code = $response->getStatus();
                 if ($code >= 300) {
                     $this->message(
@@ -367,8 +373,8 @@ class HarvestOaiPmh
         }
         $code = $response->getStatus();
         if ($code >= 300) {
-            $this->message("Request '$urlStr' failed: $code", false, Logger::FATAL);
-            throw new Exception("Request failed: $code");
+            $this->message("{$this->source}: Request '$urlStr' failed: $code", false, Logger::FATAL);
+            throw new Exception("{$this->source}: Request failed: $code");
         }
 
         // If we got this far, there was no error -- send back response.
@@ -376,7 +382,7 @@ class HarvestOaiPmh
         if ($this->debugLog) {
             file_put_contents($this->debugLog, "Response:\n$responseStr\n\n", FILE_APPEND);
         }
-        return $this->processResponse($responseStr);
+        return $this->processResponse($responseStr, isset($params['resumptionToken']));
     }
 
     /**
@@ -403,12 +409,13 @@ class HarvestOaiPmh
      * Process an OAI-PMH response into a SimpleXML object. Throw exception if an error is
      * detected.
      *
-     * @param string $xml OAI-PMH response XML.
+     * @param string $xml        OAI-PMH response XML.
+     * @param bool   $resumption Whether this is a request made with a resumptionToken
      *
      * @return object     SimpleXML-formatted response.
      * @access protected
      */
-    protected function processResponse($xml)
+    protected function processResponse($xml, $resumption)
     {
         // Parse the XML:
         $saveUseErrors = libxml_use_internal_errors(true);
@@ -433,8 +440,8 @@ class HarvestOaiPmh
             libxml_use_internal_errors($saveUseErrors);
             $tempfile = tempnam(sys_get_temp_dir(), 'oai-pmh-error-') . '.xml';
             file_put_contents($tempfile, $xml);
-            $this->message("Could not parse XML response: $errors. XML stored in $tempfile", false, Logger::FATAL);
-            throw new Exception("Failed to parse XML response");
+            $this->message("{$this->source}: Could not parse XML response: $errors. XML stored in $tempfile", false, Logger::FATAL);
+            throw new Exception("{$this->source}: Failed to parse XML response");
         }
         libxml_use_internal_errors($saveUseErrors);
 
@@ -442,15 +449,15 @@ class HarvestOaiPmh
         $error = $this->getSingleNode($result, 'error');
         if ($error) {
             $code = $error->getAttribute('code');
-            if ($code != 'noRecordsMatch') {
+            if (($resumption && !$this->ignoreNoRecordsMatch) || $code != 'noRecordsMatch') {
                 $value = $result->saveXML($error);
                 $this->message(
-                    "OAI-PMH server returned error $code ($value)", 
+                    "{$this->source}: OAI-PMH server returned error $code ($value)", 
                     false,
                     Logger::FATAL
                 );
                 throw new Exception(
-                    "OAI-PMH error -- code: $code, " .
+                    "{$this->source}: OAI-PMH error -- code: $code, " .
                     "value: $value\n"
                 );
             }
@@ -525,7 +532,7 @@ class HarvestOaiPmh
                 }
                 $recordNode = $this->getSingleNode($recordMetadata, '*');
                 if ($recordNode === false) {
-                    $this->message("No metadata fields found for record $id", false, Logger::ERROR);
+                    $this->message("No metadata found for record $id", false, Logger::ERROR);
                     continue;
                 }
                 // Add namespaces to the record element
