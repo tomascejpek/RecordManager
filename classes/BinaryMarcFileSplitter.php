@@ -49,11 +49,12 @@ class BinaryMarcFileSplitter
     /**
      * Construct the splitter
      * 
+     * last two args are not used, only keeps arity of FileSplitter constructor
      * @param mixed  $data        XML string or DOM document
-     * @param string $recordXPath XPath used to find the records
-     * @param string $oaiIDXPath  XPath used to find the records' oaiID's (relative to record)
+     * @param string $recordXPath XPath used to find the records --unused
+     * @param string $oaiIDXPath  XPath used to find the records' oaiID's (relative to record) --unused
      */
-    function __construct($file)
+    function __construct($file,$recordXPath = '', $oaiIDXpath = '')
     {
         $this->records = new File_MARC($file);
         $this->current = $this->records->nextRaw();
