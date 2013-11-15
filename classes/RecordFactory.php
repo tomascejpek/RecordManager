@@ -65,8 +65,12 @@ class RecordFactory
             return $obj;
         }
 
-        $path = "{$class}.php";
+        $path = __DIR__.'/'."{$class}.php";
         include_once $path;
+        
+        if (strpos($class, '/') != false) {
+            $class = substr($class,strpos($class, '/') + 1);
+        }
         if (class_exists($class)) {
             $obj = new $class($data, $oaiID, $source);
             return $obj;
