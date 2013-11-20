@@ -80,6 +80,7 @@ class RecordManager
     protected $counts = false;
     protected $compressedRecords = true;
     protected $enableRecordCheck = false;
+    protected $inputEncoding;
     
     //storing buffer size
    	private $bufferSize = 100;
@@ -95,6 +96,7 @@ class RecordManager
     {
         global $configArray;
         global $logger;
+        global $dataSourceSettings;
         
         date_default_timezone_set($configArray['Site']['timezone']);
 
@@ -115,6 +117,7 @@ class RecordManager
         $basePath = substr(__FILE__, 0, strrpos(__FILE__, DIRECTORY_SEPARATOR));
         $basePath = substr($basePath, 0, strrpos($basePath, DIRECTORY_SEPARATOR));
         $this->dataSourceSettings = parse_ini_file("$basePath/conf/datasources.ini", true);
+        $dataSourceSettings = $this->dataSourceSettings;
         $this->basePath = $basePath;
 
         $timeout = isset($configArray['Mongo']['connect_timeout']) ? $configArray['Mongo']['connect_timeout'] : 300000;
@@ -160,6 +163,10 @@ class RecordManager
     public function loadFromFile($source, $files)
     {
         $this->loadSourceSettings($source);
+        
+        global $dataSourceSettings;
+        $dataSourceSettings = $this->dataSourceSettings;
+        
         if (!$this->recordXPath) {
             $this->log->log('loadFromFile', 'recordXPath not defined', Logger::FATAL);
             throw new Exception('recordXPath not defined');
@@ -186,11 +193,9 @@ class RecordManager
             if ($this->fileSplitter) {
                 require_once $this->fileSplitter;
                 $className = str_replace('.php', '', $this->fileSplitter);
-                if ($className == 'SingleXmlFileSplitter') {
-                    $splitter = new $className(file_get_contents($file),$this->recordXPath,$this->oaiIDXPath);
-                } else {
-                    $splitter  = new $className($file);
-                }
+   
+                $splitter = new $className(file_get_contents($file),$this->recordXPath,$this->oaiIDXPath);
+
             } else {
                 $data = file_get_contents($file);
                 if ($data === false) {
@@ -1780,6 +1785,9 @@ class RecordManager
         } else {
             $this->enableRecordCheck = false;
         }
+        if (isset($settings['inputEncoding'])) {
+            $this->inputEncoding = strtolower($settings['fileSplitter']);
+        } 
     }
     
     /**

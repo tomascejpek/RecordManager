@@ -75,6 +75,11 @@ class MarcRecord extends BaseRecord
     {
         parent::__construct($data, $oaiID, $source);
 
+        global $dataSourceSettings;
+        if (isset ($dataSourceSettings[$source])) {
+            $this->settings = $dataSourceSettings[$source];
+        }
+        
         $firstChar = substr($data, 0, 1);
         if ($firstChar === '{') {
             $fields = json_decode($data, true);
@@ -1279,10 +1284,22 @@ protected function parseXML($xml)
      */
     protected function parseISO2709($marc)
     {
+        //EXPERIMENTAL remove CR LF
+        if ($marc[0] == "\r") {
+            $marc = substr($marc, 2);
+        }
+        
         $this->fields['000'] = substr($marc, 0, 24);
         $dataStart = 0 + substr($marc, 12, 5);
         $dirLen = $dataStart - MARCRecord::LEADER_LEN - 1;
-
+        
+        $finalEncoding = null;
+        if (isset($this->settings) && isset($this->settings['inputEncoding'])
+            && strtolower($this->settings['inputEncoding']) != 'utf-8' ) {
+            
+            $finalEncoding = $this->settings['inputEncoding'];
+        }
+        
         $offset = 0;
         while ($offset < $dirLen) {
             $tag = substr($marc, MARCRecord::LEADER_LEN + $offset, 3);
@@ -1290,7 +1307,7 @@ protected function parseXML($xml)
             $dataOffset = substr($marc, MARCRecord::LEADER_LEN + $offset + 7, 5);
 
             $tagData = substr($marc, $dataStart + $dataOffset, $len);
-
+            
             if (substr($tagData, -1, 1) == MARCRecord::END_OF_FIELD) {
                 $tagData = substr($tagData, 0, -1);
                 $len--;
@@ -1304,8 +1321,15 @@ protected function parseXML($xml)
                     'i2' => $tagData[1]
                 );                
                 $subfields = explode(MARCRecord::SUBFIELD_INDICATOR, substr($tagData, 3));
-                foreach ($subfields as $subfield) {
-                    $newField['s'][] = array($subfield[0] => substr($subfield, 1));
+            foreach ($subfields as $subfield) {
+                $str = substr($subfield, 1);
+                if (isset($finalEncoding)) {
+                    $str = iconv($this->settings['inputEncoding'],"utf-8",$str);
+                    if ($str === false) {
+                        $str = substr($subfield,1);
+                    }
+                }     
+                    $newField['s'][] = array($subfield[0] => $str);
                 }
                 $this->fields[$tag][] = $newField;
             } else {
