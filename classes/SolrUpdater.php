@@ -195,7 +195,7 @@ class SolrUpdater
                     if (isset($mongoFromDate)) {
                         $params['updated'] = array('$gte' => $mongoFromDate);
                     }
-                    $params['update_needed'] = false;
+                  //$params['update_needed'] = false;
                 }
                 $records = $this->db->record->find($params);
                 $records->immortal(true);
@@ -327,7 +327,7 @@ class SolrUpdater
                 if (!$delete) {
                     $params['update_needed'] = false;
                 }
-                $params['dedup_key'] = array('$exists' => true);
+                $params['dedup_id'] = array('$exists' => true);
             }
             
             $collectionName = 'mr_record_' . md5(json_encode($params));

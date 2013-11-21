@@ -974,7 +974,8 @@ class RecordManager
             $id = $metadataRecord->getID();
             if (!$id) {
                 if (!$oaiID) {
-                    throw new Exception("Empty ID returned for record and no OAI ID");
+//                     throw new Exception("Empty ID returned for record and no OAI ID");
+print("Empty ID returned for record and no OAI ID\n");
                 }
                 $id = $oaiID;
             }
@@ -1244,7 +1245,7 @@ class RecordManager
                         continue;
                     }
                     // Don't bother with id or title dedup if ISBN dedup already failed
-                    if ($type != 'isbn_keys') {
+//                     if ($type != 'isbn_keys') {
                         if (isset($candidate['isbn_keys'])) {
                             $sameKeys = array_intersect($ISBNArray, $candidate['isbn_keys']);
                             if ($sameKeys) {
@@ -1257,7 +1258,7 @@ class RecordManager
                                 continue;
                             }
                         }
-                    }
+//                     }
                     ++$candidateCount;
                     // Verify the candidate has not been deduped with this source yet
                     if (isset($candidate['dedup_id']) && (!isset($record['dedup_id']) || $candidate['dedup_id'] != $record['dedup_id'])) {
@@ -1322,14 +1323,15 @@ class RecordManager
         if (isset($record['dedup_id']) || $record['update_needed']) {
             if (isset($record['dedup_id'])) {
                 $this->removeFromDedupRecord($record['dedup_id'], $record['_id']);
-                unset($record['dedup_id']);
-                $record['updated'] = new MongoDate();
-                $record['update_needed'] = false;
-                $this->__storeIntoBuffer($record);
-
-                //flush buffer
-                $this->__storeBufferedRecords();
             }
+            unset($record['dedup_id']);
+            $record['updated'] = new MongoDate();
+            $record['update_needed'] = false;
+            $this->__storeIntoBuffer($record);
+
+            //flush buffer
+            $this->__storeBufferedRecords();
+        
         }
         
         if ($this->verbose && microtime(true) - $startTime > 0.2) {
