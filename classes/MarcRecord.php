@@ -1211,6 +1211,7 @@ class MarcRecord extends BaseRecord
      * @throws Exception
      * @return void
      */
+/*
     protected function parseXML($marc)
     {
         $xmlHead = '<?xml version';
@@ -1244,7 +1245,7 @@ class MarcRecord extends BaseRecord
             $this->fields[(string)$field['tag']][] = $newField;
         }
     }
-/*
+*/
 protected function parseXML($xml) 
     {
        $document = simplexml_load_string($xml);
@@ -1272,7 +1273,7 @@ protected function parseXML($xml)
            $this->fields[(string)$field['tag']][] = $newField;
        }
     }
-*/
+
 
     /**
      * Parse ISO2709 exchange format
@@ -1287,6 +1288,9 @@ protected function parseXML($xml)
         //EXPERIMENTAL remove CR LF
         if ($marc[0] == "\r") {
             $marc = substr($marc, 2);
+        }
+        if ($marc[0] == "\n") {
+            $marc = substr($marc, 1);
         }
         
         $this->fields['000'] = substr($marc, 0, 24);
@@ -1345,7 +1349,7 @@ protected function parseXML($xml)
      * 
      * @return string
      */
-    protected function toISO2709()
+    public function toISO2709()
     {
         global $configArray;
         

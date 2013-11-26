@@ -54,6 +54,8 @@ Parameters:
 --source            Export only the given source
 --single            Export single record with the given id
 --xpath             Export only records matching the XPath expression
+--inputFile         Export only records fith ID presented in file, one per line
+--outputFormat      Format of exported data, choice xml/iso, xml is default
 --config.section.name=value 
                     Set configuration directive to given value overriding any setting in recordmanager.ini
 
@@ -73,7 +75,9 @@ EOT;
         isset($params['skip']) ? $params['skip'] : 0, 
         isset($params['source']) ? $params['source'] : '', 
         isset($params['single']) ? $params['single'] : '',
-        isset($params['xpath']) ? $params['xpath'] : ''
+        isset($params['xpath']) ? $params['xpath'] : '',
+        isset($params['inputFile']) ? $params['inputFile'] : '',
+        isset($params['outputFormat']) ? $params['outputFormat'] : ''
     );
 }
 

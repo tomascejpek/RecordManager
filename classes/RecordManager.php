@@ -240,7 +240,7 @@ class RecordManager
      * 
      * @return void
      */
-    public function exportRecords($file, $deletedFile, $fromDate, $skipRecords = 0, $sourceId = '', $singleId = '', $xpath = '')
+    public function exportRecords($file, $deletedFile, $fromDate, $skipRecords = 0, $sourceId = '', $singleId = '', $xpath = '', $inputFile = '', $outputFormat = 'xml')
     {
         if ($file == '-') {
             $file = 'php://stdout';
@@ -252,8 +252,23 @@ class RecordManager
         if ($deletedFile && file_exists($deletedFile)) {
             unlink($deletedFile);
         }
-        file_put_contents($file, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\n<collection>\n", FILE_APPEND);
-
+        $listID = array();
+        if ($inputFile != '') {
+            $content = file_get_contents($inputFile);
+            if ($content == false) {
+                $this->log->log('exportRecords', "File ". $inputFile ." reading failed", Logger::WARNING);
+            } else {
+                $listID = explode("\n", $content);
+                $this->log->log('exportRecords', count($listID). " IDs loaded from file ". $inputFile);
+            }
+        }
+        
+        $format = 'xml';
+        if (strtolower($outputFormat) == 'iso') {
+            $format = 'iso';
+        } else {
+            file_put_contents($file, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\n<collection>\n", FILE_APPEND);
+        }
         foreach ($this->dataSourceSettings as $source => $settings) {
             try {
                 if ($sourceId && $sourceId != '*' && $source != $sourceId) {
@@ -268,16 +283,18 @@ class RecordManager
                 $this->log->log('exportRecords', "Creating record list (from " . ($fromDate ? $fromDate : 'the beginning') . ", source '$source')");
 
                 $params = array();
+                $params['source_id'] = $source;
                 if ($singleId) {
                     $params['_id'] = $singleId;
-                    $params['source_id'] = $source;
+                } elseif ($listID) {
+                    $params['_id'] = array('$in' => $listID);
                 } else {
-                    $params['source_id'] = $source;
                     if ($fromDate) {
                         $params['updated'] = array('$gte' => new MongoDate(strtotime($fromDate)));
                     }
                     $params['update_needed'] = false;
                 }
+
                 $records = $this->db->record->find($params);
                 $total = $this->counts ? $records->count() : 'the';
                 $count = 0;
@@ -313,9 +330,13 @@ class RecordManager
                             ++$deduped;
                         }
                         $metadataRecord->addDedupKeyToMetadata((isset($record['dedup_id'])) ? $record['dedup_id'] : $record['_id']);
-                        $xml = $metadataRecord->toXML();
-                        $xml = preg_replace('/^<\?xml.*?\?>[\n\r]*/', '', $xml);
-                        file_put_contents($file, $xml . "\n", FILE_APPEND);
+                        if ($format == 'iso') {
+                            $output = $metadataRecord->toISO2709();
+                        } else {
+                            $output = $metadataRecord->toXML();
+                            $output = preg_replace('/^<\?xml.*?\?>[\n\r]*/', '', $output);
+                        }
+                        file_put_contents($file, $output . "\n", FILE_APPEND);
                     }
                     if ($count % 1000 == 0) {
                         $this->log->log('exportRecords', "$deleted deleted, $count normal (of which $deduped deduped) records exported from '$source'");
@@ -326,7 +347,9 @@ class RecordManager
                 $this->log->log('exportRecords', 'Exception: ' . $e->getMessage(), Logger::FATAL);
             }
         }
-        file_put_contents($file, "</collection>\n", FILE_APPEND);
+        if ($format == 'xml') {
+            file_put_contents($file, "</collection>\n", FILE_APPEND);
+        }
     }
 
     /**
