@@ -81,6 +81,7 @@ class RecordManager
     protected $compressedRecords = true;
     protected $enableRecordCheck = false;
     protected $inputEncoding;
+    protected $lineRecordLeader = false;
     
     //storing buffer size
    	private $bufferSize = 100;
@@ -193,9 +194,11 @@ class RecordManager
             if ($this->fileSplitter) {
                 require_once $this->fileSplitter;
                 $className = str_replace('.php', '', $this->fileSplitter);
-   
-                $splitter = new $className(file_get_contents($file),$this->recordXPath,$this->oaiIDXPath);
-
+                if ($className == 'LineMarcFileSplitter') {
+                    $splitter = new LineMarcFileSplitter(file_get_contents($file), $this->lineRecordLeader);
+                } else {
+                    $splitter = new $className(file_get_contents($file),$this->recordXPath,$this->oaiIDXPath);
+                }
             } else {
                 $data = file_get_contents($file);
                 if ($data === false) {
@@ -1811,8 +1814,11 @@ print("Empty ID returned for record and no OAI ID\n");
             $this->enableRecordCheck = false;
         }
         if (isset($settings['inputEncoding'])) {
-            $this->inputEncoding = strtolower($settings['fileSplitter']);
+            $this->inputEncoding = strtolower($settings['inputEncoding']);
         } 
+        if (isset($settings['lineRecordLeader'])) {
+            $this->lineRecordLeader = $settings['lineRecordLeader'];
+        }
     }
     
     /**

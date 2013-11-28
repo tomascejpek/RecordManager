@@ -63,6 +63,7 @@ class MarcRecord extends BaseRecord
     protected $fields;
     protected $idPrefix = '';
     protected $source;
+    protected $encoding = null;
 
     /**
      * Constructor
@@ -78,6 +79,11 @@ class MarcRecord extends BaseRecord
         global $dataSourceSettings;
         if (isset ($dataSourceSettings[$source])) {
             $this->settings = $dataSourceSettings[$source];
+        }
+        
+        if (isset($this->settings) && isset($this->settings['inputEncoding'])
+        && strtolower($this->settings['inputEncoding']) != 'utf-8' ) {
+            $this->encoding = $this->settings['inputEncoding'];
         }
         
         $firstChar = substr($data, 0, 1);
@@ -136,6 +142,8 @@ class MarcRecord extends BaseRecord
             } 
         } elseif ($firstChar === '<') {
             $this->parseXML($data);
+        } elseif (ctype_alpha($firstChar)) {
+            $this->parseLineMarc($data);
         } else {
             $this->parseISO2709($data);
         }
@@ -1286,23 +1294,13 @@ protected function parseXML($xml)
     protected function parseISO2709($marc)
     {
         //EXPERIMENTAL remove CR LF
-        if ($marc[0] == "\r") {
-            $marc = substr($marc, 2);
-        }
-        if ($marc[0] == "\n") {
-            $marc = substr($marc, 1);
-        }
+        $marc = trim($marc,"\n\r");
         
         $this->fields['000'] = substr($marc, 0, 24);
         $dataStart = 0 + substr($marc, 12, 5);
         $dirLen = $dataStart - MARCRecord::LEADER_LEN - 1;
         
-        $finalEncoding = null;
-        if (isset($this->settings) && isset($this->settings['inputEncoding'])
-            && strtolower($this->settings['inputEncoding']) != 'utf-8' ) {
-            
-            $finalEncoding = $this->settings['inputEncoding'];
-        }
+ 
         
         $offset = 0;
         while ($offset < $dirLen) {
@@ -1327,8 +1325,8 @@ protected function parseXML($xml)
                 $subfields = explode(MARCRecord::SUBFIELD_INDICATOR, substr($tagData, 3));
             foreach ($subfields as $subfield) {
                 $str = substr($subfield, 1);
-                if (isset($finalEncoding)) {
-                    $str = iconv($this->settings['inputEncoding'],"utf-8",$str);
+                if (isset($this->encoding)) {
+                    $str = iconv($this->encoding,"utf-8",$str);
                     if ($str === false) {
                         $str = substr($subfield,1);
                     }
@@ -1342,6 +1340,7 @@ protected function parseXML($xml)
             
             $offset += 12;
         }
+        print_r($this->fields);
     }
 
     /**
@@ -1406,6 +1405,60 @@ protected function parseXML($xml)
             . str_pad($dataStart, 5, '0', STR_PAD_LEFT)
             . substr($leader, 17);
         return $leader . $directory . $data;
+    }
+    
+    /**
+     * parses Line marc-formated record
+     * @param string $marc
+     */
+    protected function parseLineMarc($marc) {
+        $lines = explode("\n", $marc);
+        $finalField = array();
+        
+        foreach ($lines as $line) {
+            $line = trim($line,"\n\r");
+        
+            $field = substr($line, 0, 3);
+            $line = substr($line, 4, strlen($line));
+        
+            if ($field == 'LDR') {
+                $finalField['000'] = array($line);
+                continue;
+            }
+        
+            $arrayField = array();
+            //handle this for wrong-formated fields 001, 003, 005, 008
+            if ($field == '001' || $field == '003' || $field == '005' || $field == '008') {
+                $finalField[$field] = array($this->encodeString($line));
+                continue;
+            }
+        
+            $arrayField['i1'] = $line[0] == '#' ? '' : $line[0];
+            $arrayField['i2'] = $line[1] == '#' ? '' : $line[1];
+            $line = substr($line, 3);
+            
+            $subfield = null;
+            $currentString = "";
+            $arrayField['s'] = array();
+        
+            for ($i = 0; $i < strlen($line);) {
+                if ($line[$i] == '$' && ctype_alnum($line[$i+1])) {
+                    if ($subfield != null) {
+                        $arrayField['s'][] = array($subfield => $this->encodeString($currentString));
+                    }
+                    $subfield = null;
+                    $currentString = "";
+                    $subfield = $line[++$i];
+                    $i++;
+                } else {
+                    $currentString .= $line[$i++];
+                }
+            }
+            $arrayField['s'][] = array($subfield => $this->encodeString($currentString));
+            $finalField[$field] = array($arrayField);
+        
+        }
+        $this->fields = $finalField;
     }
 
     /**
@@ -1846,6 +1899,16 @@ protected function parseXML($xml)
             $allFields
         );
         return array_values(array_unique($allFields));
+    }
+    
+    protected function encodeString($str) {
+        
+        if (isset($this->encoding)) {
+            $encoded = iconv($this->encoding,"utf-8",$str);
+            return $encoded != false ? $encoded : $str;
+        }
+        
+        return $str;
     }
 }
 

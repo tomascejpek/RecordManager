@@ -53,10 +53,12 @@
 ; institution = MyInst
 ; enableRecordCheck = true
 ; inputEncoding = cp1250
+; lineRecordLeader = LDR
 
 ; RecordManager settings:
 ; enableRecordCheck     if true, every time record is about to be stored, method 'checkRecord' is called. If it returns true record is actually stored, otherwise is skipped 
 ; inputEncoding			if set, this encoding is used as encoding of input records, default is utf-8 
+; lineRecordLeader      If LineRecordFileSplitter is used, this leader will be used as record separator
 ; institution           The institution code mapped to the source (required)
 ; recordXPath           xpath expression used when loading records from a file to identify a single record (optional, e.g. //record)
 ; format                Record format in RecordManager
