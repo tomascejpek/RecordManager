@@ -1340,7 +1340,6 @@ protected function parseXML($xml)
             
             $offset += 12;
         }
-        print_r($this->fields);
     }
 
     /**
@@ -1427,8 +1426,8 @@ protected function parseXML($xml)
             }
         
             $arrayField = array();
-            //handle this for wrong-formated fields 001, 003, 005, 008
-            if ($field == '001' || $field == '003' || $field == '005' || $field == '008') {
+            //handle control fields
+            if (strpos($field, '00') === 0) {
                 $finalField[$field] = array($this->encodeString($line));
                 continue;
             }
