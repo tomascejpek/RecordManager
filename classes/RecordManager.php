@@ -175,6 +175,7 @@ class RecordManager
         $count = 0;
         foreach (glob($files) as $file) {
             $this->log->log('loadFromFile', "Loading records from '$file' into '$source'");
+            ini_set("memory_limit","1G");
             $data = file_get_contents($file);
             if ($data === false) {
                 throw new Exception("Could not read file '$file'");
@@ -196,8 +197,10 @@ class RecordManager
                 $className = str_replace('.php', '', $this->fileSplitter);
                 if ($className == 'LineMarcFileSplitter') {
                     $splitter = new LineMarcFileSplitter(file_get_contents($file), $this->lineRecordLeader);
+                } elseif ($className == 'BinaryMarcFileSplitter') {
+                    $splitter = new $className($file);
                 } else {
-                    $splitter = new $className(file_get_contents($file),$this->recordXPath,$this->oaiIDXPath);
+                    $splitter = new $className($data,$this->recordXPath,$this->oaiIDXPath);
                 }
             } else {
                 $data = file_get_contents($file);
@@ -217,7 +220,11 @@ class RecordManager
                 if ($this->verbose) {
                     echo "Storing a record\n";
                 }
-                $count += $this->storeRecord($oaiID, false, $data);
+                try {
+                    $count += $this->storeRecord($oaiID, false, $data);
+                } catch (Exception $e) {
+                    $this->log->log('loadFromFile', 'Exception: ' . $e->getMessage(), Logger::FATAL);
+                }
                 if ($this->verbose) {
                     echo "Stored records: $count\n";
                 }
