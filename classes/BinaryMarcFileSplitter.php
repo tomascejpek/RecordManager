@@ -39,48 +39,104 @@
  */
 
 require_once 'File/MARC.php';
- 
+
 class BinaryMarcFileSplitter
 {
 
+    const CHUNK_SIZE = 1048576; //1 MB
     protected $records;
     protected $current;
+    protected $file;
+
+    protected $restFromLastRound;
 
     /**
      * Construct the splitter
-     * 
+     *
      * last two args are not used, only keeps arity of FileSplitter constructor
      * @param mixed  $data        XML string or DOM document
-     * @param string $recordXPath XPath used to find the records --unused
-     * @param string $oaiIDXPath  XPath used to find the records' oaiID's (relative to record) --unused
      */
-    function __construct($file,$recordXPath = '', $oaiIDXpath = '')
+    function __construct($fileName)
     {
-        $this->records = new File_MARC($file);
-        $this->current = $this->records->nextRaw();
+        $this->file = fopen($fileName, "rb");
+        if (!file_exists($fileName) || !is_readable ($fileName)) {
+            throw new Exception("Could not read file '$fileName'");
+        }
+        
+        $this->reloadArray();
     }
 
     /**
      * Check whether EOF has been encountered
-     * 
+     *
      * @return boolean
      */
     public function getEOF()
     {
-        return  !((bool) $this->current);
+        return  feof($this->file);
     }
 
     /**
      * Get next record
-     * 
+     *
      * @param string &$oaiID OAI Identifier (if XPath specified in constructor)
-     * 
+     *
      * @return string|boolean
      */
     public function getNextRecord(&$oaiID)
     {
-        $result = $this->current;
-        $this->current = $this->records->nextRaw(); 
+        $result = trim($this->current,"\n\r");
+        $this->current = $this->records->nextRaw();
+        if ( !(bool) $this->current) {
+            $this->reloadArray();
+        }
         return $result;
+    }
+
+    /**
+     * reads another chunk from input file and creates records from it
+     */
+    protected function reloadArray() {
+        $bytes = fread($this->file, self::CHUNK_SIZE);
+        $endsArray = array();
+
+        $first = null;
+        $last = null;
+        for ($i = 0; $i < strlen($bytes); $i++) {
+            if ($bytes[$i] == File_MARC::END_OF_RECORD) {
+                $first = $i;
+                break;
+            }
+        }
+        
+        for ($i = strlen($bytes) -1; $i > 0; $i--) {
+            if ($bytes[$i] == File_MARC::END_OF_RECORD) {
+                $last = $i;
+                break;
+            }
+        }
+        
+        if (empty($first) && empty($last)) {
+            //any record nor starts nor ends in chunk 
+            $this->restFromLastRound .= $bytes;
+            self::reloadArray();
+            return;
+        }
+        
+        $rest = null;
+        if ($last < strlen($bytes)) {
+            $rest = substr($bytes, $last + 1);
+            $bytes = substr($bytes, 0, $last + 1);
+        }
+        
+        if ($this->restFromLastRound != null) {
+            $bytes = $this->restFromLastRound.$bytes;
+        } 
+
+        $this->restFromLastRound =  trim($rest,"\n\r");
+        $this->records = new File_MARC($bytes, File_MARC::SOURCE_STRING);
+        $this->current = $this->records->nextRaw();
+
+
     }
 }

@@ -175,13 +175,13 @@ class RecordManager
         $count = 0;
         foreach (glob($files) as $file) {
             $this->log->log('loadFromFile', "Loading records from '$file' into '$source'");
-            ini_set("memory_limit","1G");
-            $data = file_get_contents($file);
-            if ($data === false) {
-                throw new Exception("Could not read file '$file'");
-            }
             
+            $data = null;
             if ($this->pretransformation) {
+                $data = file_get_contents($file);
+                if ($data === false) {
+                    throw new Exception("Could not read file '$file'");
+                }
                 if ($this->verbose) {
                     echo "Executing pretransformation\n";
                 }
@@ -196,14 +196,16 @@ class RecordManager
                 require_once $this->fileSplitter;
                 $className = str_replace('.php', '', $this->fileSplitter);
                 if ($className == 'LineMarcFileSplitter') {
-                    $splitter = new LineMarcFileSplitter(file_get_contents($file), $this->lineRecordLeader);
+                    $data = $data == null ? file_get_contents($file) : $data;
+                    $splitter = new LineMarcFileSplitter($data, $this->lineRecordLeader);
                 } elseif ($className == 'BinaryMarcFileSplitter') {
                     $splitter = new $className($file);
                 } else {
+                    $data = $data == null ? file_get_contents($file) : $data;
                     $splitter = new $className($data,$this->recordXPath,$this->oaiIDXPath);
                 }
             } else {
-                $data = file_get_contents($file);
+                $data == null ? file_get_contents($file) : $data;
                 if ($data === false) {
                     throw new Exception("Could not read file '$file'");
                 }
