@@ -380,6 +380,7 @@ class RecordManager
     public function updateSolrIndex($fromDate = null, $sourceId = '', $singleId = '', $noCommit = false)
     {
         global $configArray;
+        $this->loadSourceSettings($sourceId);
         $updater = new SolrUpdater($this->db, $this->basePath, $this->log, $this->verbose);
         
         if (isset($configArray['Solr']['merge_records']) && $configArray['Solr']['merge_records']) {
@@ -1828,6 +1829,10 @@ print("Empty ID returned for record and no OAI ID\n");
         if (isset($settings['lineRecordLeader'])) {
             $this->lineRecordLeader = $settings['lineRecordLeader'];
         }
+        if (isset($settings['translateLang']) && $settings['translateLang'] == true ) {
+            global $dataSourceSettings;
+            $dataSourceSettings[$source]['translateLangArray'] =  parse_ini_file("$this->basePath/conf/language_map.ini");
+        } 
     }
     
     /**
