@@ -64,6 +64,7 @@ class MarcRecord extends BaseRecord
     protected $idPrefix = '';
     protected $source;
     protected $encoding = null;
+    protected $settings;
 
     /**
      * Constructor

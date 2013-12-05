@@ -56,6 +56,15 @@ class VnfMarcRecord extends MarcRecord
             }
         }
         
+        $field = parent::getField('260');
+        if ($field) {
+            $year = parent::getSubfield($field, 'c');
+            $matches = array();
+            if ($year && preg_match('/(\d{4})/', $year, $matches)) {
+                $data['publishDate_display'] = $matches[1];
+            }
+        }
+        
         return $data;
     }
 
