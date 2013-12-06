@@ -53,4 +53,9 @@ class CbvkMarcRecord extends VnfMarcRecord
     {
         parent::__construct($data, $oaiID, $source);
     }
+    
+    public function toSolrArray() {
+        $data = parent::toSolrArray();
+        return $data;
+    }
 }

@@ -24,7 +24,8 @@ class PortalMarcRecord extends MarcRecord
      * @param string $oaiID  Record ID received from OAI-PMH (or empty string for file import)
      * @param string $source Source ID
      */
-    public __consruct($data, $oaiID, $source) {
+    public function __construct($data, $oaiID, $source)
+    {
         parent::__construct($data, $oaiID, $source);
     }
 
@@ -75,8 +76,8 @@ class PortalMarcRecord extends MarcRecord
             return $instArray;
         }
         
-        $field = parent::getField($lvl2field)
-        if ($field) {
+        $field = parent::getField($lvl2field);
+        if ($field) {       
             $subField = parent::getSubfields($field, $lvl2subfield);
             if ($subField) {
                 $depth++;
