@@ -1267,9 +1267,16 @@ protected function parseXML($xml)
              throw new Exception('MarcRecord: failed to parse from XML');
        }
        $document->registerXPathNamespace('marc', 'http://www.loc.gov/MARC21/slim');
-
-       $this->fields['000'] = isset($xml->leader) ? (string)$xml->leader[0] : '';
+       
+       $query = $document->xpath('marc:leader');
+       if (is_array($query)) {
+           $this->fields['000'] = (string) $query[0];
+       } else {
+           $this->fields['000'] = '';
+       }
+       
        $query = $document->xpath('marc:controlfield');
+       
        foreach ($query as $field) {
            $this->fields[(string)$field['tag']][] = (string)$field[0];
        }
