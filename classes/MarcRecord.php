@@ -1266,28 +1266,39 @@ protected function parseXML($xml)
        if ($xml === false) {
              throw new Exception('MarcRecord: failed to parse from XML');
        }
-       $document->registerXPathNamespace('marc', 'http://www.loc.gov/MARC21/slim');
        
-       $query = $document->xpath('marc:leader');
-       if (is_array($query)) {
+       $namespaces = $document->getNamespaces(false);
+       if (is_array($namespaces)) {
+           foreach ($namespaces as $name => $url) {
+               if (preg_match('/.*marc.*/i', $name)) {
+                   $document->registerXPathNamespace($name, $url);
+                   $namespace = $name.':';
+                   break;
+               }
+           }
+       } else {
+           $namespace = "";
+       }
+       
+       $query = $document->xpath($namespace.'leader');
+       if ($query !== false && count($query) > 0) {
            $this->fields['000'] = (string) $query[0];
        } else {
            $this->fields['000'] = '';
        }
        
-       $query = $document->xpath('marc:controlfield');
-       
+       $query = $document->xpath($namespace.'controlfield');
        foreach ($query as $field) {
            $this->fields[(string)$field['tag']][] = (string)$field[0];
        }
 
-       $query = $document->xpath('marc:datafield');
+       $query = $document->xpath($namespace.'datafield');
        foreach ($query as $field) {
            $newField = array(
                    'i1' => str_pad((string)$field['ind1'], 1),
                    'i2' => str_pad((string)$field['ind2'], 1)
            );
-           $subfieldQuery = $field->xpath('marc:subfield');
+           $subfieldQuery = $field->xpath($namespace.'subfield');
            foreach ($subfieldQuery as $subfield) {
                $newField['s'][] = array((string)$subfield['code'] => (string)$subfield);
            }
