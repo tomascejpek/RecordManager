@@ -205,7 +205,7 @@ class RecordManager
                     $splitter = new $className($data,$this->recordXPath,$this->oaiIDXPath);
                 }
             } else {
-                $data == null ? file_get_contents($file) : $data;
+                $data = $data == null ? file_get_contents($file) : $data;
                 if ($data === false) {
                     throw new Exception("Could not read file '$file'");
                 }
@@ -306,7 +306,6 @@ class RecordManager
                     }
                     $params['update_needed'] = false;
                 }
-
                 $records = $this->db->record->find($params);
                 $total = $this->counts ? $records->count() : 'the';
                 $count = 0;
@@ -380,7 +379,9 @@ class RecordManager
     public function updateSolrIndex($fromDate = null, $sourceId = '', $singleId = '', $noCommit = false)
     {
         global $configArray;
-        $this->loadSourceSettings($sourceId);
+        foreach (explode(',', $sourceId) as $source) {
+            $this->loadSourceSettings($source);
+        }
         $updater = new SolrUpdater($this->db, $this->basePath, $this->log, $this->verbose);
         
         if (isset($configArray['Solr']['merge_records']) && $configArray['Solr']['merge_records']) {
