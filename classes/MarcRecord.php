@@ -1262,12 +1262,13 @@ class MarcRecord extends BaseRecord
 */
 protected function parseXML($xml) 
     {
-       $document = simplexml_load_string($xml);
-       if ($xml === false) {
+       $document = simplexml_load_string(html_entity_decode($xml));
+       if ($document === false) {
              throw new Exception('MarcRecord: failed to parse from XML');
        }
        
        $namespaces = $document->getNamespaces(false);
+       $namespace = '';
        if (is_array($namespaces)) {
            foreach ($namespaces as $name => $url) {
                if (preg_match('/.*marc.*/i', $name)) {
@@ -1276,8 +1277,6 @@ protected function parseXML($xml)
                    break;
                }
            }
-       } else {
-           $namespace = "";
        }
        
        $query = $document->xpath($namespace.'leader');
