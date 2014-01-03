@@ -38,7 +38,7 @@
 class SAXFileSplitter
 {
     protected $xmlParser;
-    protected $recordPath;
+    protected $recordTag;
     protected $file;
 
     protected $currentIndex;
@@ -50,11 +50,11 @@ class SAXFileSplitter
      * Construct the splitter
      *
      * @param string $filename    Filename
-     * @param string $recordPath  Path to record from root element in XML i.e. record
+     * @param string $recordTag   Tag name of starting record
      */
-    function __construct($filename, $recordPath)
+    function __construct($filename, $recordTag)
     {
-        $this->recordPath = $recordPath;
+        $this->recordTag = $recordTag;
 
         $this->file = fopen($filename, "rb");
         if (!file_exists($filename) || !is_readable ($filename)) {
@@ -88,6 +88,9 @@ class SAXFileSplitter
     public function getNextRecord(&$oaiID)
     {
         if ($this->currentIndex >= count($this->recordArray)) {
+            if ($this->getEOF()) {
+                return false;
+            } 
             $this->reloadArray();
         }
         return $this->recordArray[$this->currentIndex++];
@@ -116,7 +119,7 @@ class SAXFileSplitter
      */
     protected function startElement($parser, $name, $attribs = array())
     {
-        if (strcasecmp($name, $this->recordPath) == 0) {
+        if (strcasecmp($name, $this->recordTag) == 0) {
             $this->recordOpened = true;
             $this->currentRecord = '';
         }
@@ -140,7 +143,7 @@ class SAXFileSplitter
         if ($this->recordOpened) {
             $this->currentRecord .= '</'.$name.'>';
         }
-        if (strcasecmp($name, $this->recordPath) == 0) {
+        if (strcasecmp($name, $this->recordTag) == 0) {
             $this->recordOpened = false;
             $this->recordArray[] = $this->currentRecord;
         }
