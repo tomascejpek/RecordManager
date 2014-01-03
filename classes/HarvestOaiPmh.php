@@ -174,15 +174,17 @@ class HarvestOaiPmh
      * Harvest all available documents.
      *
      * @param functionref $callback Function to be called to store a harvested record
+     * @param functionref $callback_final Cleanup function to be called after harvesting
      * 
      * @return void
      * @access public
      */
-    public function harvest($callback)
+    public function harvest($callback, $callback_final = null)
     {
         $this->_normalRecords = 0;
         $this->deletedRecords = 0;
         $this->_callback = $callback;
+        $this->_callback_final = $callback_final;
 
         if ($this->resumptionToken) {
             $this->message('Incremental harvest from given resumptionToken');
@@ -585,6 +587,8 @@ class HarvestOaiPmh
         }
         $dateFormat = ($this->granularity == 'YYYY-MM-DD') ? 'Y-m-d' : 'Y-m-d\TH:i:s\Z';
         $this->saveHarvestDate(date($dateFormat, $this->serverDate));
+        //cleanup
+        call_user_func($this->_callback_final);
         return false;
     }
 

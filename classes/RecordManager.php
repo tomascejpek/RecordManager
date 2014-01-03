@@ -200,6 +200,8 @@ class RecordManager
                     $splitter = new LineMarcFileSplitter($data, $this->lineRecordLeader);
                 } elseif ($className == 'BinaryMarcFileSplitter') {
                     $splitter = new $className($file);
+                } elseif ($className == 'SAXFileSplitter') {
+                    $splitter = new $className($file, 'record');
                 } else {
                     $data = $data == null ? file_get_contents($file) : $data;
                     $splitter = new $className($data,$this->recordXPath,$this->oaiIDXPath);
@@ -235,7 +237,7 @@ class RecordManager
         }
         
         $this->log->log('loadFromFile', "Total $count records loaded");
-        $this->__storeBufferedRecords();
+        $this->flushBuffer();
         return $count;
     }
 
@@ -299,7 +301,7 @@ class RecordManager
                 if ($singleId) {
                     $params['_id'] = $singleId;
                 } elseif ($listID) {
-                    $params['_id'] = array('$in' => $listID);
+                   // $params['_id'] = array('$in' => $listID);
                 } else {
                     if ($fromDate) {
                         $params['updated'] = array('$gte' => new MongoDate(strtotime($fromDate)));
@@ -585,7 +587,7 @@ class RecordManager
                 $this->log->log('deduplicate', 'Exception: ' . $e->getMessage(), Logger::FATAL);
             }
             //flush buffer after each datasource deduplication
-            $this->__storeBufferedRecords();
+            $this->flushBuffer();
         }
     }
 
@@ -709,7 +711,7 @@ class RecordManager
                         $harvest->setEndDate($harvestUntilDate);
                     }
                     
-                    $harvest->harvest(array($this, 'storeRecord'));
+                    $harvest->harvest(array($this, 'storeRecord'), array($this, 'flushBuffer'));
                     
                     if ($reharvest) {
                         $this->log->log('harvest', 'Marking deleted all records not received during the harvesting');
@@ -1367,7 +1369,7 @@ print("Empty ID returned for record and no OAI ID\n");
             $this->__storeIntoBuffer($record);
 
             //flush buffer
-            $this->__storeBufferedRecords();
+            $this->flushBuffer();
         
         }
         
@@ -1870,14 +1872,14 @@ print("Empty ID returned for record and no OAI ID\n");
     {
     	array_push($this->bufferedRecords, $record);
     	if (count($this->bufferedRecords) % $this->bufferSize == 0) {
-    		$this->__storeBufferedRecords();
+    		$this->flushBuffer();
     	}
     }
     /**
      * stores buffered records in this->$bufferedRecords into db. Works as "flush", must be called at the end of storing precudures.
      * @param array $bufferedRecords records to be stored into database
      */
-    private function __storeBufferedRecords() 
+    public function flushBuffer() 
     {
     	if (!isset($this->bufferedRecords)) {
     		return;
