@@ -1262,7 +1262,7 @@ class MarcRecord extends BaseRecord
 */
 protected function parseXML($xml) 
     {
-       $document = simplexml_load_string(html_entity_decode($xml));
+       $document = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOENT);
        if ($document === false) {
              throw new Exception('MarcRecord: failed to parse from XML');
        }
