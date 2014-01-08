@@ -29,7 +29,7 @@
 /**
  * LineMarcFileSplitter
  *
- * This class splits binary MARC to multiple records
+ * This class splits line MARC into multiple records
  *
  * @category DataManagement
  * @package  RecordManager
@@ -40,32 +40,45 @@
 
 class LineMarcFileSplitter {
     
-    protected $splitedData;
-    protected $leader;
-    protected $currentIndex;
+    const MAX_LENGTH = 10000;
     
-    public function __construct($data, $leader, $dummyArg = null)
+    protected $file;
+    protected $settings = array();
+    
+    public function __construct($filename, $source)
     {
-        if (empty($leader)) {
-            if ($xml === false) {
-                throw new Exception('LineMarcFileSplitter: Missing record leader');
-            }
+        if (!is_readable($filename)) {
+            throw new Exception('LineMarcFileSplitter: input file \''.$filename.'\' isn\'t readable');
         }
-        $this->leader = $leader;
-        $this->currentIndex = 0;
-        $this->splitedData = preg_split("/^$this->leader/m", $data, -1, PREG_SPLIT_NO_EMPTY);
+        
+        global $dataSourceSettings;
+        $this->settings = $dataSourceSettings[$source];
+        
+        $this->file = fopen($filename, "rb");
+        
+        if (!array_key_exists('lineRecordLeader', $this->settings) || !isset($this->settings['lineRecordLeader'])) {
+            //detect leader if it's not found in settings   
+            $line = fgets($this->file);
+            $line = trim($line);
+            rewind($this->file);
+            
+            $array = preg_split("/[\s]+/", $line);
+            if (count($array) < 2) {
+                 throw new Exception('LineMarcFileSplitter: Leader recognition failed');
+            }
+            $this->settings['lineRecordLeader'] = $array[0];
+            fseek($this->file, strlen( $this->settings['lineRecordLeader']));
+        }
     }
     
     public function getEOF() 
     {
-        return $this->currentIndex >= count($this->splitedData);
+        return feof($this->file);
     }
     
     public function getNextRecord($dummyArg = null)
     {
-        return $this->leader.$this->splitedData[$this->currentIndex++];
+        return  $this->settings['lineRecordLeader'] . stream_get_line($this->file, self::MAX_LENGTH,  $this->settings['lineRecordLeader']);
     }
-    
-    
 }
 ?>
