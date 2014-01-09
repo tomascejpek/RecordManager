@@ -195,9 +195,12 @@ class RecordManager
             if ($this->fileSplitter) {
                 require_once $this->fileSplitter;
                 $className = str_replace('.php', '', $this->fileSplitter);
-                if ($className == 'LineMarcFileSplitter') {
-                    $data = $data == null ? file_get_contents($file) : $data;
-                    $splitter = new LineMarcFileSplitter($data, $this->lineRecordLeader);
+                if ($className == 'AutoDetectFileSplitter') {
+                    $splitter = new AutoDetectFileSplitter($file, $source);
+                } elseif ($className == 'EncodingDetectFileSplitter') {
+                    $splitter = new EncodingDetectFileSplitter($file, $source);
+                } elseif ($className == 'LineMarcFileSplitter') {
+                    $splitter = new LineMarcFileSplitter($file, $source);
                 } elseif ($className == 'BinaryMarcFileSplitter') {
                     $splitter = new $className($file);
                 } elseif ($className == 'SAXFileSplitter') {
