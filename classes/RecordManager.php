@@ -717,7 +717,11 @@ class RecordManager
                         $harvest->setEndDate($harvestUntilDate);
                     }
                     
-                    $harvest->harvest(array($this, 'storeRecord'), array($this, 'flushBuffer'));
+                    $callbacks = array();
+                    $callbacks[] = array($this, 'flushBuffer');
+                    $callbacks[] = array($this, 'completeLinks');
+                    
+                    $harvest->harvest(array($this, 'storeRecord'), $callbacks);
                     
                     if ($reharvest) {
                         $this->log->log('harvest', 'Marking deleted all records not received during the harvesting');
@@ -1941,7 +1945,7 @@ print("Empty ID returned for record and no OAI ID\n");
     /**
      * adds missing UP and DN links to loaded records.
      */
-    public function completeLinks($oaiID) 
+    public function completeLinks($oaiID = '') 
     {
         $linkCount = 0;
         $recordCount = 0;
@@ -1979,6 +1983,7 @@ print("Empty ID returned for record and no OAI ID\n");
                 $dbRecord['normalized_data'] = $normalizedData;
 
                 $dbRecord['update_needed'] = true;
+                $dbRecord['updated'] = new MongoDate();
                 $this->db->record->save($dbRecord);
                 $recordCount++;
             }

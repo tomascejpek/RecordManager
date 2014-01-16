@@ -53,7 +53,7 @@ class AutoDetectFileSplitter {
         global $logger;
         
         $fh = fopen($filename, "rb");
-        $content = fread($fh, 1000);
+        $content = fread($fh, 10000);
         fclose($fh);
 
         $content = trim($content);
