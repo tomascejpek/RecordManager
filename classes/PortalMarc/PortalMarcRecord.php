@@ -32,12 +32,44 @@ class PortalMarcRecord extends MarcRecord
     public function toSolrArray() {
         $data = parent::toSolrArray();
 
+        /*
         $field = parent::getField('260');
         if ($field) {
             $year = parent::getSubfield($field, 'c');
             $matches = array();
             if ($year && preg_match('/(\d{4})/', $year, $matches)) {
                 $data['publishDate_display'] = $matches[1];
+            }
+        }
+        */
+
+        // autocomplete field for concatenation of author and title
+        if (isset($data['author']) && isset($data['title_short'])) {
+            $author_title = $data['author'] . ': ' . $data['title_short'];
+            $data['author_title_autocomplete'] = $author_title;
+            $data['author_title_str'] = $author_title;
+        }
+
+        // bib record created date
+        $field008 = $this->getField('008');
+        if ($field008) {
+            $created = substr($this->getField('008'), 0, 6);
+            $created = date_format(date_create_from_format('ymd', $created), 'Ymd');
+            $data['acq_int'] = $created;
+        }
+
+        // conspectus
+        foreach ($this->getFields('072') as $field) {
+            $type = $this->getSubfield($field, '2');
+            if ($type == 'Konspekt') {
+                $categoryId = $this->getSubfield($field, '9');
+                if ($categoryId) {
+                    $data['category_txtF'] = $categoryId;
+                }
+                $subcategory = $this->getSubfield($field, 'x');
+                if ($subcategory) {
+                    $data['subcategory_txtF'] = $subcategory;
+                }
             }
         }
 
