@@ -1348,13 +1348,15 @@ protected function parseXML($xml)
                 $subfields = explode(MARCRecord::SUBFIELD_INDICATOR, substr($tagData, 3));
             foreach ($subfields as $subfield) {
                 $str = substr($subfield, 1);
-                if (isset($this->encoding)) {
-                    $str = iconv($this->encoding,"utf-8",$str);
-                    if ($str === false) {
-                        $str = substr($subfield,1);
+                    if (isset($this->encoding)) {
+                        $str = iconv($this->encoding,"utf-8",$str);
+                        if ($str === false) {
+                            $str = substr($subfield,1);
+                        }
+                    }    
+                    if (!empty($subfield)) { 
+                        $newField['s'][] = array($subfield[0] => $str);
                     }
-                }     
-                    $newField['s'][] = array($subfield[0] => $str);
                 }
                 $this->fields[$tag][] = $newField;
             } else {
@@ -1932,5 +1934,14 @@ protected function parseXML($xml)
         
         return $str;
     }
+    
+    public function getHierarchyField() {
+        return '';
+    }
+    
+    public function addHierarchyLink($type, $target) {
+        return;
+    }
+    
 }
 

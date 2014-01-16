@@ -86,6 +86,8 @@ class RecordManager
     //storing buffer size
    	private $bufferSize = 100;
    	private $bufferedRecords = array();
+   	
+   	private $linkArray = array();
     
     /**
      * Constructor
@@ -241,6 +243,7 @@ class RecordManager
         
         $this->log->log('loadFromFile', "Total $count records loaded");
         $this->flushBuffer();
+        $this->completeLinks($oaiID);
         return $count;
     }
 
@@ -1022,6 +1025,21 @@ print("Empty ID returned for record and no OAI ID\n");
                 $id = $oaiID;
             }
             $id = $this->idPrefix . '.' . $id;
+
+            $hierarchyFields = $metadataRecord->getHierarchyField();
+            if (!empty($hierarchyFields)) {
+                foreach ($hierarchyFields as $hierarchyField) {
+    
+                    if (strcasecmp($hierarchyField['a'], 'UP') == 0) {
+                        $this->__putLinkToBuffer($hierarchyField['b'], 'DN', $id);
+                    }
+                    
+                    if (strcasecmp($hierarchyField['a'], 'DN') == 0) {
+                        $this->__putLinkToBuffer($hierarchyField['b'], 'UP', $id);
+                    }
+                }
+            }
+            
             $dbRecord = $this->db->record->findOne(array('_id' => $id));
             if ($dbRecord) {
                 $dbRecord['updated'] = new MongoDate();
@@ -1878,12 +1896,37 @@ print("Empty ID returned for record and no OAI ID\n");
     		$this->flushBuffer();
     	}
     }
+    
+    private function __putLinkToBuffer($id, $direction, $target) 
+    {
+        if (!array_key_exists($id, $this->linkArray)) {
+            $this->linkArray[$id] = array();
+        }
+        $this->linkArray[$id][] = array('direction' => $direction, 'target' => $target);
+    }
     /**
-     * stores buffered records in this->$bufferedRecords into db. Works as "flush", must be called at the end of storing precudures.
+     * stores buffered records in this->$bufferedRecords into db. Must be called at the end of storing precudures.
+     * Also stores link information into DB.
      * @param array $bufferedRecords records to be stored into database
      */
     public function flushBuffer() 
     {
+        if (isset($this->linkArray) && !empty($this->linkArray)) {    
+            foreach ($this->linkArray as $id => $values) {
+                
+                $existingLink = $this->db->links->findOne(array('_id' => $id));
+                if (isset($existingLink)) {
+                    $this->db->links->update(array('_id' => $id), array('$addToSet' => array('links' => $values)));
+                } else {
+                    $data = array();
+                    $data['_id'] = $id;
+                    $data['links'] = array($values);
+                    $this->db->links->save($data);
+                }  
+            }
+            $this->linkArray = array();
+        }
+        
     	if (!isset($this->bufferedRecords)) {
     		return;
     	}
@@ -1893,5 +1936,54 @@ print("Empty ID returned for record and no OAI ID\n");
     	}
     	
     	$this->bufferedRecords = array();
+    }
+    
+    /**
+     * adds missing UP and DN links to loaded records.
+     */
+    public function completeLinks($oaiID) 
+    {
+        $linkCount = 0;
+        $recordCount = 0;
+        
+        $links = $this->db->links->find(); 
+        foreach ($links as $id => $values) {
+            $dbRecord = $this->db->record->findOne(array('_id' => $id));
+            if (isset($dbRecord)) {
+                $recordContent = MetadataUtils::getRecordData($dbRecord, true);
+                $metadataRecord = RecordFactory::createRecord($this->format, $recordContent, $oaiID, $this->sourceId);
+         
+                foreach ($values['links'][0] as $linkData) { 
+                    $metadataRecord->addHierarchyLink($linkData['direction'], $linkData['target']);
+                    $linkCount++;
+                }
+                $originalData = $metadataRecord->serialize();
+                $metadataRecord->normalize();
+                $normalizedData = $metadataRecord->serialize();
+                
+                $dbRecord['date'] = $dbRecord['updated'];
+                
+                  if ($normalizedData) {
+                    if ($originalData == $normalizedData) {
+                        $normalizedData = '';
+                    };
+                }
+                if ($this->compressedRecords) {
+                    $originalData = new MongoBinData(gzdeflate($originalData), 2);
+                    if ($normalizedData) {
+                        $normalizedData = new MongoBinData(gzdeflate($normalizedData), 2);
+                    }
+                }
+
+                $dbRecord['original_data'] = $originalData;
+                $dbRecord['normalized_data'] = $normalizedData;
+
+                $dbRecord['update_needed'] = true;
+                $this->db->record->save($dbRecord);
+                $recordCount++;
+            }
+        }
+        $this->log->log('completeRecords', "$linkCount links successfully completed in $recordCount records", Logger::INFO);
+        $this->db->links->remove();
     }
 }
