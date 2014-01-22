@@ -431,6 +431,14 @@ class HarvestOaiPmh
             $result = $this->loadXML($xml);
         }
         if ($result === false || libxml_get_last_error() !== false) {
+            // possible entity problem
+            $this->message('Invalid XML received, trying entity fix...', false, Logger::WARNING);
+            $xml = preg_replace("/\&(?!amp;)/", "&amp;", $xml);
+            libxml_clear_errors();
+            $result = $this->loadXML($xml);
+        }
+        
+        if ($result === false || libxml_get_last_error() !== false) {
             $errors = '';
             foreach (libxml_get_errors() as $error) {
                 if ($errors) {
