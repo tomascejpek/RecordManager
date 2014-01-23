@@ -43,6 +43,9 @@ class SAXFileSplitter
 
     protected $currentIndex;
     protected $currentRecord;
+    
+    static $replacements = array('<','>', '&');
+    static $entities = array ('&lt;','&gt;','&amp;');
 
     protected $recordArray = array();
     protected $recordOpened = false;
@@ -75,7 +78,7 @@ class SAXFileSplitter
      */
     public function getEOF()
     {
-        return feof($this->file);
+        return count($this->recordArray) == $this->currentIndex && feof($this->file);
     }
 
     /**
@@ -88,12 +91,12 @@ class SAXFileSplitter
     public function getNextRecord(&$oaiID)
     {
         if ($this->currentIndex >= count($this->recordArray)) {
-            if ($this->getEOF()) {
+            if (feof($this->file)) {
                 return false;
             } 
             $this->reloadArray();
         }
-        return $this->recordArray[$this->currentIndex++];
+        return $this->recordArray[$this->currentIndex++];;
     }
 
     /**
@@ -147,7 +150,6 @@ class SAXFileSplitter
             $this->recordOpened = false;
             $this->recordArray[] = $this->currentRecord;
         }
-
     }
 
     /**
@@ -155,9 +157,10 @@ class SAXFileSplitter
      * @param unknown $parser
      * @param unknown $data
      */
-    protected function parseContent($parser, $data) {
+    protected function parseContent($parser, $data) 
+    {
         if ($this->recordOpened) {
-            $this->currentRecord .= $data;
+            $this->currentRecord .= str_replace(self::$replacements, self::$entities, $data);
         }
     }
 }
