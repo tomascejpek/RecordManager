@@ -32,6 +32,12 @@ class MzkMarcRecord extends PortalMarcRecord
         $data = parent::toSolrArray();
 
         $data['institution'] = $this->getHierarchicalInstitutions();
+        
+        $z30 = $this->getField("Z30");
+        $availability_id_str = $this->getSubfield($z30, 'w');
+        if (!empty($availability_id_str)) {
+            $data['availability_id_str'] = $availability_id_str;
+        }
         return $data;
     }
 
