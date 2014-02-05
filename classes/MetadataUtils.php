@@ -461,4 +461,23 @@ class MetadataUtils
         }
         return $str;
     }
+    
+    public static function validateCoordinates($west, $east, $north, $south) {
+        if (is_nan($west) || is_nan($east) || is_nan($north) || is_nan($south)) {
+            return false;
+        }
+        if (!($west && $east && $north && $south)) {
+            return false;
+        }
+        if ($west > 180.0 || $west < -180.0 || $east > 180.0 || $east < -180.0) {
+            return false;
+        }
+        if ($north > 90.0 || $north < -90.0 || $south > 90.0 || $south < -90.0) {
+            return false;
+        }
+        if ($north < $south || $west > $east) {
+            return false;
+        }
+        return true;
+    }
 }
