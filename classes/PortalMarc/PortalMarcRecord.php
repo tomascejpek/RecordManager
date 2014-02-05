@@ -113,7 +113,7 @@ class PortalMarcRecord extends MarcRecord
             $subField = parent::getSubfields($field, $lvl2subfield);
             if ($subField) {
                 $depth++;
-                $institution .= '/'.$second;
+                $institution .= '/'.$subField;
                 $instArray[] = $depth.'/'.$institution;
             }
         }
