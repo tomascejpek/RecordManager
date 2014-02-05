@@ -1,0 +1,20 @@
+#!/bin/bash
+
+BASE_RM_DIR="/path/"
+BASE_LOG_PATH="/path/"
+DB_NAME="db"
+SOLR_CORE_URL="http://"
+
+DATASOURCES="source1,source2"
+
+LOG_DATE=`date '+%Y_%m_%d'`
+LOG_FILE=$BASE_LOG_PATH"harvest_"$LOG_DATE".log"
+
+
+cd $BASE_RM_DIR
+
+php harvest.php --source=$DATASOURCES --config.Mongo.database=$DB_NAME >> $LOG_FILE 2>&1
+echo "-----------------------DEDUPLICATION-----------------------" >> $LOG_FILE
+php manage.php --config.Mongo.database=$DB_NAME --func=deduplicate --source=$DATASOURCES >> $LOG_FILE 2>&1
+echo "-----------------------SOLR UPDATE-------------------------" >> $LOG_FILE
+php manage.php --config.Mongo.database=$DB_NAME --config.Solr.update_url=$SOLR_CORE_URL --func=updatesolr --source=$DATASOURCES >> $LOG_FILE 2>&1
