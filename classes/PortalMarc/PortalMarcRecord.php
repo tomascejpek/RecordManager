@@ -73,6 +73,8 @@ class PortalMarcRecord extends MarcRecord
             }
         }
 
+        $data['statuses'] = $this->getStatuses();
+
         return $data;
     }
     
@@ -118,6 +120,34 @@ class PortalMarcRecord extends MarcRecord
             }
         }
         return $instArray;
+    }
+
+    protected function getStatuses() {
+        $present = false;
+        $absent = false;
+        $freeStack = false;
+        foreach ($this->getFields('996') as $field) {
+            $status = $this->getSubfield($field, 's');
+            if (strtolower($status) == 'p') { // present
+                $present = true;
+            } else if (strtolower($status) == 'a') { // absent
+                $absent = true;
+            }
+            $readyInHours = $this->getSubfield($field, 'n');
+            if ($readyInHours == '0') {
+                $freeStack = true;
+            }
+        }
+        $statuses = array();
+        if ($absent) {
+            $statuses[] = 'absent';
+        } else if ($present) {
+            $statuses[] = 'present';
+        }
+        if ($freeStack && !empty($statuses)) {
+            $statuses[] = 'free-stack';
+        }
+        return $statuses;
     }
 
 }
