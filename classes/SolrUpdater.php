@@ -1279,15 +1279,11 @@ class SolrUpdater
         try {
             $response = $this->request->send();
         } catch (Exception $e) {
-            if ($try < $maxTries) {
-                $this->log->log(
-                    'solrRequest',
-                    'Solr server request failed (' . $e->getMessage() . '), retrying in 60 seconds...', 
-                    Logger::WARNING
-                );
-                sleep(60);
-                continue;
-            }
+            $this->log->log(
+                'solrRequest',
+                'Solr server request failed (' . $e->getMessage() . '), retrying in 60 seconds...', 
+                Logger::WARNING
+            );
             if ($background) {
                 $this->log->log(
                     'solrRequest', 
