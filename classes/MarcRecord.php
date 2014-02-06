@@ -1442,11 +1442,46 @@ protected function parseXML($xml)
         return $leader . $directory . $data;
     }
     
+    public function toLineMarc()
+    {
+    	$result = "";
+    	$leader = str_pad(substr($this->fields['000'], 0, 24), 24);
+    	$result = "LDR  $leader\n";
+    	foreach ($this->fields as $tag => $fields) {
+    		if ($tag == '000') {
+    			continue;
+    		}
+    		if (strlen($tag) != 3) {
+    			error_log("Invalid field tag: '$tag', id " . $this->getField('001'));
+    			continue;
+    		}
+    		foreach ($fields as $field) {
+    			$fieldStr = $tag;
+    			if (is_array($field)) {
+    				$fieldStr .= empty($field['i1']) ? ' ' : $field['i1'];
+    				$fieldStr .= empty($field['i2']) ? ' ' : $field['i2'];
+    				if (isset($field['s']) && is_array($field['s'])) {
+    					foreach ($field['s'] as $subfield) {
+    						$subfieldCode = key($subfield);
+    						$fieldStr .= '$' . $subfieldCode . current($subfield);
+    					}
+    				}
+    			} else {
+    				$fieldStr .= '  ' . trim($field);
+    			}
+    			$result .= $fieldStr . "\n";
+    		}
+    	}
+    	return $result;
+    }
+    
+    
     /**
      * parses Line marc-formated record
      * @param string $marc
      */
-    protected function parseLineMarc($marc) {
+    protected function parseLineMarc($marc) 
+    {
         $lines = explode("\n", $marc);
         $finalField = array();
         

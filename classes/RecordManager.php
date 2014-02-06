@@ -286,6 +286,8 @@ class RecordManager
         $format = 'xml';
         if (strtolower($outputFormat) == 'iso') {
             $format = 'iso';
+        } elseif (strtolower($outputFormat) == 'line') {
+            $format = 'line';
         } else {
             file_put_contents($file, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\n<collection>\n", FILE_APPEND);
         }
@@ -349,11 +351,16 @@ class RecordManager
                             ++$deduped;
                         }
                         $metadataRecord->addDedupKeyToMetadata((isset($record['dedup_id'])) ? $record['dedup_id'] : $record['_id']);
-                        if ($format == 'iso') {
-                            $output = $metadataRecord->toISO2709();
-                        } else {
-                            $output = $metadataRecord->toXML();
-                            $output = preg_replace('/^<\?xml.*?\?>[\n\r]*/', '', $output);
+                        switch ($format) {
+                            case 'iso' :                        	
+                                $output = $metadataRecord->toISO2709();
+                                break;
+                            case 'line':
+                                $output = $metadataRecord->toLineMarc();
+                                break;
+                            default:
+                                $output = $metadataRecord->toXML();
+                                $output = preg_replace('/^<\?xml.*?\?>[\n\r]*/', '', $output);
                         }
                         file_put_contents($file, $output . "\n", FILE_APPEND);
                     }
