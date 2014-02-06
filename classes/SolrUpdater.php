@@ -919,6 +919,9 @@ class SolrUpdater
         }
         
         $data['id'] = $record['_id'];
+        if (isset($data['availability_id_str'])) {
+            $data['availability_id_str'] = $source . '.' . $data['availability_id_str'];
+        }
         
         // Record links between host records and component parts
         if ($metadataRecord->getIsComponentPart()) {

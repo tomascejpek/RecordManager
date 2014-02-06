@@ -245,6 +245,15 @@ class MarcRecord extends BaseRecord
             $north = MetadataUtils::coordinateToDecimal($northOrig);
             $south = MetadataUtils::coordinateToDecimal($southOrig);
 
+            if (MetadataUtils::validateCoordinates($west, $east, $north, $south)) {
+                $coord = implode(' ', array($west, $south, $east, $north));
+                $data['bbox_geo'] = $coord;
+                $data['bbox_geo_str'] = $coord;
+            } else {
+                global $logger;
+                $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." decoded from w=$westOrig, e=$eastOrig, n=$northOrig, s=$southOrig, decoded as w=$west e=$east n=$north s=$south" , Logger::WARNING);
+            }
+            
             if (!is_nan($west) && !is_nan($north)) {
                 if (!is_nan($east)) {
                     $longitude = ($west + $east) / 2;
@@ -262,15 +271,6 @@ class MarcRecord extends BaseRecord
                     $logger->log('MarcRecord', "Discarding invalid coordinates $longitude,$latitude decoded from w=$westOrig, e=$eastOrig, n=$northOrig, s=$southOrig, record {$this->source}." . $this->getID(), Logger::WARNING);
                 } else {
                     $data['long_lat'] = "$longitude,$latitude";
-                    global $logger;
-                    if (!$north || $south || $east || $west) {
-                         $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." missig coordinate w=$west e=$east n=$north s=$south", Logger::WARNING);
-                    }
-                    if ($north > $south) {
-                        $data['bbox_geo'] = ($west.' '.$south.' '.$east.' '.$north);
-                    } else {
-                        $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." decoded from w=$westOrig, e=$eastOrig, n=$northOrig, s=$southOrig,decoded as w=$west e=$east n=$north s=$south" , Logger::WARNING);
-                    }
                 }
             }
         }
@@ -286,16 +286,7 @@ class MarcRecord extends BaseRecord
         $data['allfields'] = $this->getAllFields();
           
         // language
-        $languages = array(substr($this->getField('008'), 35, 3));
-        $languages += $this->getFieldsSubfields(
-            array(
-                array(MarcRecord::GET_NORMAL, '041', array('a')),
-                array(MarcRecord::GET_NORMAL, '041', array('d')),
-                array(MarcRecord::GET_NORMAL, '041', array('h')),
-                array(MarcRecord::GET_NORMAL, '041', array('j'))
-            ), 
-            false, true, true
-        );
+        $languages = $this->getLanguages();
             
         foreach ($languages as $language) {
             if (preg_match('/^\w{3}$/', $language) && $language != 'zxx' && $language != 'und') {
@@ -568,6 +559,26 @@ class MarcRecord extends BaseRecord
         // TODO: dewey fields and OCLC numbers
           
         return $data;
+    }
+
+    /**
+     * Return languages
+     *
+     * @return array
+     */
+    public function getLanguages()
+    {
+        $languages = array(substr($this->getField('008'), 35, 3));
+        $languages += $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '041', array('a')),
+                array(MarcRecord::GET_NORMAL, '041', array('d')),
+                array(MarcRecord::GET_NORMAL, '041', array('h')),
+                array(MarcRecord::GET_NORMAL, '041', array('j'))
+            ),
+            false, true, true
+        );
+        return $languages;
     }
 
     /**
