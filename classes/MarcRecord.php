@@ -286,16 +286,7 @@ class MarcRecord extends BaseRecord
         $data['allfields'] = $this->getAllFields();
           
         // language
-        $languages = array(substr($this->getField('008'), 35, 3));
-        $languages += $this->getFieldsSubfields(
-            array(
-                array(MarcRecord::GET_NORMAL, '041', array('a')),
-                array(MarcRecord::GET_NORMAL, '041', array('d')),
-                array(MarcRecord::GET_NORMAL, '041', array('h')),
-                array(MarcRecord::GET_NORMAL, '041', array('j'))
-            ), 
-            false, true, true
-        );
+        $languages = $this->getLanguages();
             
         foreach ($languages as $language) {
             if (preg_match('/^\w{3}$/', $language) && $language != 'zxx' && $language != 'und') {
@@ -568,6 +559,26 @@ class MarcRecord extends BaseRecord
         // TODO: dewey fields and OCLC numbers
           
         return $data;
+    }
+
+    /**
+     * Return languages
+     *
+     * @return array
+     */
+    public function getLanguages()
+    {
+        $languages = array(substr($this->getField('008'), 35, 3));
+        $languages += $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '041', array('a')),
+                array(MarcRecord::GET_NORMAL, '041', array('d')),
+                array(MarcRecord::GET_NORMAL, '041', array('h')),
+                array(MarcRecord::GET_NORMAL, '041', array('j'))
+            ),
+            false, true, true
+        );
+        return $languages;
     }
 
     /**
