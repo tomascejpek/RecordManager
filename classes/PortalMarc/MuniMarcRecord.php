@@ -33,5 +33,18 @@ class MuniMarcRecord extends PortalMarcRecord
         $data['institution'] = $this->getHierarchicalInstitutions('996', 'l');
         return $data;
     }
+    
+    public function getID()
+    {
+    	$id = parent::getID();
+    	if (!empty($id)) {
+    		return $id;
+    	}
+    	$id = parent::getField('998');
+    	if (!$id) {
+    		return "";
+    	}
+    	return 's'.trim($id);
+    }
 
 }

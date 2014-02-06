@@ -1023,8 +1023,8 @@ class RecordManager
             $id = $metadataRecord->getID();
             if (!$id) {
                 if (!$oaiID) {
-//                     throw new Exception("Empty ID returned for record and no OAI ID");
-print("Empty ID returned for record and no OAI ID\n");
+                    $this->log->log('storeRecord', 'No ID found for record', LOGGER::WARNING);
+                    continue;
                 }
                 $id = $oaiID;
             }
