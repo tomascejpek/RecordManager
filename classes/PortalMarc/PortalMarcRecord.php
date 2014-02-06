@@ -203,6 +203,82 @@ class PortalMarcRecord extends MarcRecord
     {
         return $this->getFieldSubfields('996', array('b'));
     }
+    
+    /**
+     * Dedup: Return format from predefined values
+     * 
+     * Local costumizations:
+     * 
+     * - field 007 is not used
+     * - eBook, eNewspaper, eJournal, eSerial, eBookSection and eArticle not used
+     * - treat integrating resource as LawsOrOthers 
+     *
+     * @return string
+     */
+    public function getFormat()
+    {
+        
+        $leaderFormat = substr($this->getField('000'), 5, 8);
+        if ($leaderFormat == "nai" || $leaderFormat == "cai") {
+            return 'LawsOrOthers';
+        }
+    
+        // check the Leader at position 6
+        $leader = $this->getField('000');
+        $leaderBit = substr($leader, 6, 1);
+        switch (strtoupper($leaderBit)) {
+            case 'C':
+            case 'D':
+                return 'MusicalScore';
+            case 'E':
+            case 'F':
+                return 'Map';
+            case 'G':
+                return 'Slide';
+            case 'I':
+                return 'SoundRecording';
+            case 'J':
+                return 'MusicRecording';
+            case 'K':
+                return 'Photo';
+                break;
+            case 'M':
+                return 'Electronic';
+            case 'O':
+            case 'P':
+                return 'Kit';
+            case 'R':
+                return 'PhysicalObject';
+            case 'T':
+                return 'Manuscript';
+        }
+    
+        // check the Leader at position 7
+        $leaderBit = substr($leader, 7, 1);
+        switch (strtoupper($leaderBit)) {
+            // Monograph
+            case 'M':
+                return 'eBook';
+            case 'S':
+                return 'NewspaperOrJournal';
+            case 'A':
+                // Component part in monograph
+                return 'BookSection';
+            case 'B':
+                // Component part in serial
+                return 'Article';
+            case 'C':
+                // Collection
+                return 'Collection';
+            case 'D':
+                // Component part in collection (sub unit)
+                return 'SubUnit';
+            case 'I':
+                // Integrating resource
+                return 'ContinuouslyUpdatedResource';
+        }
+        return 'Other';
+    }
 
     /**
      * 
