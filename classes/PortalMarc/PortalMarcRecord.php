@@ -42,6 +42,12 @@ class PortalMarcRecord extends MarcRecord
             }
         }
         */
+        $data['title'] = $this->getTitleDisplay();
+        $data['title_full'] = $this->getTitleFull();
+        $data['title_display'] = $this->getTitleDisplay();
+        $data['publishDate_display'] = $this->getPublishDateDisplay();
+        $data['nbn'] = $this->getNBN();
+        $data['barcode_str_mv'] = $this->getBarcodes();
 
         // autocomplete field for concatenation of author and title
         if (isset($data['author']) && isset($data['title_short'])) {
@@ -72,10 +78,166 @@ class PortalMarcRecord extends MarcRecord
                 }
             }
         }
+        
+        // 600#7abdqklmprs 610#7abcklmprs 611#7aceqklmprs 630#7adklmprs 650#7avxyz 651#7avxyz 653##a 655#7avxyz 964##a 967##abc" 
+        $data['topic'] = $this->getKeywords();
 
         $data['statuses'] = $this->getStatuses();
 
         return $data;
+    }
+    
+    /**
+     * Return languages - local modification
+     * 
+     * kept:
+     * 041a - language code of text/sound track or separate title
+     * 041d - language code of sung or spoken text
+     * 
+     * added:
+     * 041e - language code of librettos
+     * 
+     * removed (confusing for readers):
+     * 041h - language code of original
+     * 041j - language code of subtitles or captions
+     *
+     * @return array
+     * 
+     */
+    public function getLanguages()
+    {
+        $languages = array(substr($this->getField('008'), 35, 3));
+        $languages += $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '041', array('a')),
+                array(MarcRecord::GET_NORMAL, '041', array('d')),
+                array(MarcRecord::GET_NORMAL, '041', array('e')),
+            ),
+            false, true, true
+        );
+        return $languages;
+    }
+    
+    /**
+     * Return full title
+     * 
+     * @return string
+     */
+    public function getTitleFull()
+    {
+        $fields = str_split('abdefghijklmnopqrstuvwxyz0123456789');
+        return $this->getFieldSubfields('245', $fields);
+    }
+    
+    /**
+     * Return title used for display in search results / record page
+     * 
+     * @return string
+     * 
+     */
+    public function getTitleDisplay()
+    {
+        return $this->getFirstFieldSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '245', array('a', 'b', 'n', 'p'))
+            )
+        );
+    }
+    
+    /**
+     * Return publish date display. 
+     * 
+     * @return string
+     */
+    public function getPublishDateDisplay() {
+        return $this->getFirstFieldSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '260', array('c'))
+            )
+        );
+    }
+    
+    /**
+     * Return NBN (national bibliographic number) used for integration with
+     * obalkyknih.cz.
+     * 
+     * @return string
+     */
+    public function getNBN() {
+        return $this->getFirstFieldSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '015', array('a'))
+            )
+        );
+    }
+    
+    /**
+     * Return created date
+     *
+     * @return string
+     */
+    public function getCreated()
+    {
+        
+    }
+    
+    public function getKeywords()
+    {
+        return $this->getAllSubfieldsWithIndicator(
+            array(
+                array('600',  null,  '7',  array('a', 'b', 'd', 'q', 'k', 'l', 'm', 'p', 'r', 's')),
+                array('610',  null,  '7',  array('a', 'b', 'c', 'k', 'l', 'm', 'p', 'r', 's')),
+                array('611',  null,  '7',  array('a', 'c', 'e' ,'q', 'k', 'l', 'm', 'p', 'r', 's')),
+                array('630',  null,  '7',  array('a', 'd', 'k', 'l', 'm', 'p', 'r', 's')),
+                array('650',  null,  '7',  array('a', 'v', 'x', 'y', 'z')),
+                array('651',  null,  '7',  array('a', 'v', 'x', 'y', 'z')),
+                array('653',  null, null,  array('a')),
+                array('655',  null,  '7',  array('a', 'v', 'x', 'y', 'z')),
+                array('964',  null, null,  array('a')),
+                array('967',  null, null,  array('a', 'b', 'c')),
+            )
+        );
+    }
+
+    public function getBarcodes()
+    {
+        return $this->getFieldSubfields('996', array('b'));
+    }
+
+    /**
+     * 
+     * 
+     * @return string
+     */
+    protected function getAllSubfieldsWithIndicator($specs)
+    {
+        $result = array();
+        foreach ($specs as $spec) {
+            $field = $spec[0];
+            $ind1 = $spec[1];
+            $ind2 = $spec[2];
+            $codes = $spec[3];
+            if (isset($this->fields[$field])) {
+                foreach ($this->fields[$field] as $f) {
+                    $i1 = $f['i1'];
+                    $i2 = $f['i2'];
+                    if (($ind1 == null || $i1 == $ind1) && ($ind2 == null || $i2 == $ind2)) {
+                        $data = array();
+                        foreach ($f['s'] as $subfield) {
+                            $code = key($subfield);
+                            if ($code === 0) {
+                                $code = '0';
+                            }
+                            if (in_array($code, $codes)) {
+                                $data[] = current($subfield);
+                            }
+                        }      
+                        $result[] = implode(' ', $data);
+                    }
+                }
+            }
+        }
+        return $result;
     }
     
     /**

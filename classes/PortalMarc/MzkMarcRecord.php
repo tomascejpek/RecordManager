@@ -41,4 +41,9 @@ class MzkMarcRecord extends PortalMarcRecord
         return $data;
     }
 
+    public function getBarcodes()
+    {
+        return $this->getFieldSubfields('Z30', array('5'));
+    }
+
 }
