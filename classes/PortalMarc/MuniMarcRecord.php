@@ -36,15 +36,11 @@ class MuniMarcRecord extends PortalMarcRecord
     
     public function getID()
     {
-    	$id = parent::getID();
-    	if (!empty($id)) {
-    		return $id;
-    	}
     	$id = parent::getField('998');
-    	if (!$id) {
-    		return "";
+    	if (empty($id)) {
+    	    $id = parent::getID();
     	}
-    	return 's'.trim($id);
+    	return trim($id);
     }
 
 }
