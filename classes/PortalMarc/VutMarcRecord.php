@@ -34,5 +34,14 @@ class VutMarcRecord extends PortalMarcRecord
         $data['institution'] = $this->getHierarchicalInstitutions();
         return $data;
     }
+    
+    public function getID()
+    {
+    	$id = parent::getField('998');
+    	if (empty($id)) {
+    	    $id = parent::getID();
+    	}
+    	return trim($id);
+    }
 
 }
