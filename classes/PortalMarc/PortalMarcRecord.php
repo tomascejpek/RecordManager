@@ -297,7 +297,7 @@ class PortalMarcRecord extends MarcRecord
             return null;
         }
         $dir = $configArray['Fulltext']['toc_dir'];
-        $file = $dir . $nbn  . '.txt';
+        $file = $dir . '/' . 'cnb_'. $nbn . '.txt';
         if (!file_exists($file)) {
             return null;
         }
