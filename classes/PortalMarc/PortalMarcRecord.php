@@ -48,6 +48,7 @@ class PortalMarcRecord extends MarcRecord
         $data['publishDate_display'] = $this->getPublishDateDisplay();
         $data['nbn'] = $this->getNBN();
         $data['barcode_str_mv'] = $this->getBarcodes();
+        $data['fulltext'] = $this->getFulltext();
 
         // autocomplete field for concatenation of author and title
         if (isset($data['author']) && isset($data['title_short'])) {
@@ -278,6 +279,29 @@ class PortalMarcRecord extends MarcRecord
                 return 'ContinuouslyUpdatedResource';
         }
         return 'Other';
+    }
+    
+    /**
+     * Get fulltext
+     * 
+     * @return string
+     */
+    protected function getFulltext()
+    {
+        global $configArray;
+        if (!isset($configArray['Fulltext']['toc_dir'])) {
+            return null;
+        }
+        $nbn = $this->getNBN();
+        if (empty($nbn)) {
+            return null;
+        }
+        $dir = $configArray['Fulltext']['toc_dir'];
+        $file = $dir . $nbn  . '.txt';
+        if (!file_exists($file)) {
+            return null;
+        }
+        return file_get_contents($file);
     }
 
     /**

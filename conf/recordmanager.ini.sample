@@ -80,3 +80,8 @@ error_email     =
 
 [Local]
 ; Put here locally defined settings for e.g. custom record classes
+
+; Fulltext indexing
+[Fulltext]
+; directory with table of contents downloaded from obalkyknih.cz
+toc_dir = ./toc/
