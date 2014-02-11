@@ -1035,7 +1035,7 @@ class RecordManager
                 }
                 $id = $oaiID;
             }
-            $id = $this->idPrefix . '.' . $id;
+            $id = $this->idPrefix . $id;
 			
             $hashOfContent = md5($originalData);
             $dbRecord = $this->db->record->findOne(array('_id' => $id));
@@ -1830,7 +1830,7 @@ class RecordManager
         }
         $this->format = $settings['format'];
         $this->sourceId = $source;
-        $this->idPrefix = isset($settings['idPrefix']) && $settings['idPrefix'] ? $settings['idPrefix'] : $source;
+        $this->idPrefix = isset($settings['idPrefix']) && $settings['idPrefix'] ? $settings['idPrefix'] : '.' . $source;
         $this->institution = $settings['institution'];
         $this->recordXPath = isset($settings['recordXPath']) ? $settings['recordXPath'] : '';
         $this->oaiIDXPath = isset($settings['oaiIDXPath']) ? $settings['oaiIDXPath'] : '';
