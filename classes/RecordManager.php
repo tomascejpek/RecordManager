@@ -1875,10 +1875,6 @@ class RecordManager
         if (isset($settings['lineRecordLeader'])) {
             $this->lineRecordLeader = $settings['lineRecordLeader'];
         }
-        if (isset($settings['translateLang']) && $settings['translateLang'] == true ) {
-            global $dataSourceSettings;
-            $dataSourceSettings[$source]['translateLangArray'] =  parse_ini_file("$this->basePath/conf/language_map.ini");
-        } 
     }
     
     /**

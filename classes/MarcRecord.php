@@ -290,11 +290,6 @@ class MarcRecord extends BaseRecord
             
         foreach ($languages as $language) {
             if (preg_match('/^\w{3}$/', $language) && $language != 'zxx' && $language != 'und') {
-                if (isset($this->settings['translateLangArray']) 
-                  && array_key_exists($language, $this->settings['translateLangArray']) ) {
-                    $translated = $this->settings['translateLangArray'][$language];
-                    $language = empty($translated) ? $language : $translated;
-                }
                 $data['language'][] = $language;
             }
         }

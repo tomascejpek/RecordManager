@@ -61,8 +61,11 @@ class PortalMarcRecord extends MarcRecord
         $field008 = $this->getField('008');
         if ($field008) {
             $created = substr($this->getField('008'), 0, 6);
-            $created = date_format(date_create_from_format('ymd', $created), 'Ymd');
-            $data['acq_int'] = $created;
+            $date = date_create_from_format('ymd', $created);
+            if ($date != false) {
+            	$created = date_format($date, 'Ymd');
+            	$data['acq_int'] = $created;
+            }
         }
 
         // conspectus
