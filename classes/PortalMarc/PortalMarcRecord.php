@@ -45,7 +45,10 @@ class PortalMarcRecord extends MarcRecord
         $data['title'] = $this->getTitleDisplay();
         $data['title_full'] = $this->getTitleFull();
         $data['title_display'] = $this->getTitleDisplay();
+        
         $data['publishDate_display'] = $this->getPublishDateDisplay();
+        $data['publishDate_txt_mv'] = $this->getPublishDate();
+        
         $data['nbn'] = $this->getNBN();
         $data['barcode_str_mv'] = $this->getBarcodes();
         $data['fulltext'] = $this->getFulltext();
@@ -58,12 +61,7 @@ class PortalMarcRecord extends MarcRecord
         }
 
         // bib record created date
-        $field008 = $this->getField('008');
-        if ($field008) {
-            $created = substr($this->getField('008'), 0, 6);
-            $created = date_format(date_create_from_format('ymd', $created), 'Ymd');
-            $data['acq_int'] = $created;
-        }
+        $data['acq_int'] = $this->getCreated();
 
         // conspectus
         foreach ($this->getFields('072') as $field) {
@@ -146,16 +144,56 @@ class PortalMarcRecord extends MarcRecord
     }
     
     /**
-     * Return publish date display. 
+     * Return textual representation of publish date display - to display
+     * in search results, not used for searching. 
      * 
      * @return string
      */
-    public function getPublishDateDisplay() {
+    public function getPublishDateDisplay()
+    {
         return $this->getFirstFieldSubfields(
             array(
                 array(MarcRecord::GET_NORMAL, '260', array('c'))
             )
         );
+    }
+    
+    public function getPublishDate()
+    {
+        return $this->getPublishDateFromItems('Z30', 'a');
+    }
+    
+    public function getPublishDateFromItems($field, $subfield)
+    {
+        $result = array();
+        $ranges = $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, $field, array($subfield))
+            )
+        );
+        foreach ($ranges as $range) {
+            $range = trim($range);
+            if (empty($range)) {
+                continue;
+            }
+            $matches = array();
+            if (preg_match('/^[0-9]{4}$/', $range)) {
+                $result[] = $range;
+            } else if (preg_match('/^([0-9]{4})[\-|\/]([0-9]{4})$/', $range, $matches)) { // 2001-2005, 2001/2002
+                $result = range($matches[1], $matches[2]);
+            } else if (preg_match('/^([0-9]{4})[\-|\/]([0-9]{2})$/', $range, $matches)) { // 1950-54
+                $start = $matches[1];
+                $end = substr($start, 0, 2) . $matches[2];
+                $result = range($start, $end);
+            } else if (preg_match('/^([0-9]{4})(,[0-9]{4})+$/', $range, $matches)) { // 1989,1990,1991
+                $result = explode(',', $range);
+            } else {
+                print "$range not matched\n";
+            }
+        }
+        $result = array_unique($result);
+        //var_export($result);
+        return $result;
     }
     
     /**
@@ -179,7 +217,13 @@ class PortalMarcRecord extends MarcRecord
      */
     public function getCreated()
     {
-        
+        $created = null;
+        $field008 = $this->getField('008');
+        if ($field008) {
+            $created = substr($this->getField('008'), 0, 6);
+            $created = date_format(date_create_from_format('ymd', $created), 'Ymd');
+        }
+        return $created;
     }
     
     public function getKeywords()
@@ -259,7 +303,7 @@ class PortalMarcRecord extends MarcRecord
         switch (strtoupper($leaderBit)) {
             // Monograph
             case 'M':
-                return 'eBook';
+                return 'Book';
             case 'S':
                 return 'NewspaperOrJournal';
             case 'A':
