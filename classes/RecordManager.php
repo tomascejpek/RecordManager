@@ -1035,8 +1035,26 @@ class RecordManager
                 }
                 $id = $oaiID;
             }
-            $id = $this->idPrefix . '.' . $id;
-
+            $id = $this->idPrefix . $id;
+			
+            $hashOfContent = md5($originalData);
+            $dbRecord = $this->db->record->findOne(array('_id' => $id));
+            if ($dbRecord) {
+            	if (isset($dbRecord['content_hash']) && strcmp($dbRecord['content_hash'], $hashOfContent) == 0) {
+            	    // don't touch unchanged records
+            	    ++$count;
+            	    continue;
+            	}
+            	$dbRecord['updated'] = new MongoDate();
+            	
+            } else {
+            	$dbRecord = array();
+            	$dbRecord['source_id'] = $this->sourceId;
+            	$dbRecord['_id'] = $id;
+            	$dbRecord['created'] = $dbRecord['updated'] = new MongoDate();
+            }
+            
+            
             $hierarchyFields = $metadataRecord->getHierarchyField();
             if (!empty($hierarchyFields)) {
                 foreach ($hierarchyFields as $hierarchyField) {
@@ -1051,21 +1069,14 @@ class RecordManager
                 }
             }
             
-            $dbRecord = $this->db->record->findOne(array('_id' => $id));
-            if ($dbRecord) {
-                $dbRecord['updated'] = new MongoDate();
-            } else {
-                $dbRecord = array();
-                $dbRecord['source_id'] = $this->sourceId;
-                $dbRecord['_id'] = $id;
-                $dbRecord['created'] = $dbRecord['updated'] = new MongoDate();
-            }
+            
             $dbRecord['date'] = $dbRecord['updated'];
             if ($normalizedData) {
                 if ($originalData == $normalizedData) {
                     $normalizedData = '';
                 };
             }
+            $dbRecord['content_hash'] = $hashOfContent;
             if ($this->compressedRecords) {
                 $originalData = new MongoBinData(gzdeflate($originalData), 2);
                 if ($normalizedData) {
@@ -1819,7 +1830,7 @@ class RecordManager
         }
         $this->format = $settings['format'];
         $this->sourceId = $source;
-        $this->idPrefix = isset($settings['idPrefix']) && $settings['idPrefix'] ? $settings['idPrefix'] : $source;
+        $this->idPrefix = isset($settings['idPrefix']) && $settings['idPrefix'] ? $settings['idPrefix'] : '.' . $source;
         $this->institution = $settings['institution'];
         $this->recordXPath = isset($settings['recordXPath']) ? $settings['recordXPath'] : '';
         $this->oaiIDXPath = isset($settings['oaiIDXPath']) ? $settings['oaiIDXPath'] : '';
@@ -1864,10 +1875,6 @@ class RecordManager
         if (isset($settings['lineRecordLeader'])) {
             $this->lineRecordLeader = $settings['lineRecordLeader'];
         }
-        if (isset($settings['translateLang']) && $settings['translateLang'] == true ) {
-            global $dataSourceSettings;
-            $dataSourceSettings[$source]['translateLangArray'] =  parse_ini_file("$this->basePath/conf/language_map.ini");
-        } 
     }
     
     /**

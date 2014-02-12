@@ -77,8 +77,7 @@ class PortalMarcRecord extends MarcRecord
                 }
             }
         }
-        
-        // 600#7abdqklmprs 610#7abcklmprs 611#7aceqklmprs 630#7adklmprs 650#7avxyz 651#7avxyz 653##a 655#7avxyz 964##a 967##abc" 
+         
         $data['topic'] = $this->getKeywords();
 
         $data['statuses'] = $this->getStatuses();
