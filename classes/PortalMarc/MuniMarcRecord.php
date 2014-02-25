@@ -30,7 +30,7 @@ class MuniMarcRecord extends PortalMarcRecord
     public function toSolrArray() {
         $data = parent::toSolrArray();
 
-        //$data['institution'] = $this->getHierarchicalInstitutions('996', 'l');
+        $data['institution'] = $this->getHierarchicalInstitutions('996', 'l');
         return $data;
     }
     

@@ -35,4 +35,13 @@ class MendMarcRecord extends PortalMarcRecord
         return $data;
     }
 
+    public function getID()
+    {
+        $id = parent::getField('998');
+        if (empty($id)) {
+            $id = parent::getID();
+        }
+        return trim($id);
+    }
+
 }
