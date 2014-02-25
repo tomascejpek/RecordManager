@@ -1451,5 +1451,10 @@ class SolrUpdater
         }
         fclose($handle);
         return $mappings;
-    }    
+    }
+
+    public function deleteSolrCore() {
+        $this->solrRequest('{"delete": { "query":"*:*" }}');
+        $this->solrRequest('{"commit": {}}');
+    }
 }

@@ -927,6 +927,11 @@ class RecordManager
         $this->log->log('deleteSolrRecords', "Deletion of '$sourceId' from Solr completed");
     }
     
+    public function deleteSolrCore() {
+    	$updater = new SolrUpdater($this->db, $this->basePath, $this->log, $this->verbose);
+    	$updater->deleteSolrCore();
+    }
+    
     /**
      * Optimize the Solr index
      * 
