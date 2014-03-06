@@ -41,7 +41,24 @@ class MendMarcRecord extends PortalMarcRecord
         if (empty($id)) {
             $id = parent::getID();
         }
+        if (is_array($id)) {
+            $reference = &$id;
+            if (array_key_exists('s', $reference)) {
+                $reference = &$reference['s'];
+            } else {
+                return null;
+            }
+            if (array_key_exists(0, $reference)) {
+                $reference = &$reference[0];
+            } else {
+                return null;
+            }
+            if (array_key_exists('a', $reference)) {
+                $id = $reference['a'];
+            } else {
+                return null;
+            }
+        }
         return trim($id);
     }
-
 }
