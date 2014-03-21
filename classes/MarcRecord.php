@@ -1482,9 +1482,13 @@ protected function parseXML($xml)
         
         foreach ($lines as $line) {
             $line = trim($line,"\n\r");
-        
+
+            if (empty($line)) {
+            	continue;
+            }
+            
             $field = substr($line, 0, 3);
-            $line = substr($line, 4, strlen($line));
+            $line = substr($line, 3, strlen($line));
         
             if ($field == 'LDR') {
                 $finalField['000'] = array($line);
@@ -1494,13 +1498,13 @@ protected function parseXML($xml)
             $arrayField = array();
             //handle control fields
             if (strpos($field, '00') === 0) {
-                $finalField[$field] = array($this->encodeString($line));
+                $finalField[$field] = array(trim($this->encodeString($line)));
                 continue;
             }
         
             $arrayField['i1'] = $line[0] == '#' ? '' : $line[0];
             $arrayField['i2'] = $line[1] == '#' ? '' : $line[1];
-            $line = substr($line, 3);
+            $line = substr($line, 2);
             
             $subfield = null;
             $currentString = "";
@@ -1520,7 +1524,7 @@ protected function parseXML($xml)
                 }
             }
             $arrayField['s'][] = array($subfield => $this->encodeString($currentString));
-            $finalField[$field] = array($arrayField);
+            $finalField[$field][] = $arrayField;
         
         }
         $this->fields = $finalField;
