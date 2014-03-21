@@ -920,7 +920,9 @@ class SolrUpdater
         
         $data['id'] = $record['_id'];
         if (isset($data['availability_id_str'])) {
-            $data['availability_id_str'] = $source . '.' . $data['availability_id_str'];
+            if (isset($settings['prefixAvailabilityIdBySource']) && $settings['prefixAvailabilityIdBySource']) {
+                $data['availability_id_str'] = $source . '.' . $data['availability_id_str'];
+            }
         }
         
         // Record links between host records and component parts
