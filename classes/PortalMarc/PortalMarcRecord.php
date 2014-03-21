@@ -220,7 +220,14 @@ class PortalMarcRecord extends MarcRecord
         $field008 = $this->getField('008');
         if ($field008) {
             $created = substr($this->getField('008'), 0, 6);
-            $created = date_format(date_create_from_format('ymd', $created), 'Ymd');
+            if ($created === false) {
+                return null;
+            }
+            $date = date_create_from_format('ymd', $created);
+            if ($date === false) {
+                return null;
+            }
+            $created = date_format($date, 'Ymd');
         }
         return $created;
     }

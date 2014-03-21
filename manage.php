@@ -45,7 +45,7 @@ Usage: $argv[0] --func=... [...]
             
 Parameters:
             
---func             renormalize|deduplicate|updatesolr|dump|markdeleted|deletesource|deletesolr|optimizesolr|count|updategeocoding|resimplifygeocoding|checkdedup
+--func             renormalize|deduplicate|updatesolr|dump|markdeleted|deletesource|deletesolr|deltesolrcore|optimizesolr|count|updategeocoding|resimplifygeocoding|checkdedup
 --source           Source ID to process (separate multiple sources with commas)
 --all              Process all records regardless of their state (deduplicate)
                    or date (updatesolr)
@@ -90,6 +90,9 @@ EOT;
             case 'deletesource':
                 $manager->deleteRecords($source);
                 break;
+            case 'deletesolrcore':
+             	$manager->deleteSolrCore();
+               	break;
             case 'markdeleted':
                 $manager->markDeleted($source);
                 break;

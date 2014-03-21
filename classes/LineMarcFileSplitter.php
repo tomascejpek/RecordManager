@@ -40,7 +40,7 @@
 
 class LineMarcFileSplitter {
     
-    const MAX_LENGTH = 10000;
+    const MAX_LENGTH = 999999;
     
     protected $file;
     protected $settings = array();
@@ -62,13 +62,12 @@ class LineMarcFileSplitter {
             $line = trim($line);
             rewind($this->file);
             
-            $array = preg_split("/[\s]+/", $line);
-            if (count($array) < 2) {
+            if (strlen($line) < 3) {
                  throw new Exception('LineMarcFileSplitter: Leader recognition failed');
             }
-            $this->settings['lineRecordLeader'] = $array[0];
-            fseek($this->file, strlen( $this->settings['lineRecordLeader']));
+            $this->settings['lineRecordLeader'] = substr($line, 0, 3);
         }
+        fseek($this->file, strlen($this->settings['lineRecordLeader']));
     }
     
     public function getEOF() 

@@ -314,7 +314,7 @@ class RecordManager
                     if ($fromDate) {
                         $params['updated'] = array('$gte' => new MongoDate(strtotime($fromDate)));
                     }
-                    $params['update_needed'] = false;
+//                  $params['update_needed'] = false;
                 }
                 $records = $this->db->record->find($params);
                 $total = $this->counts ? $records->count() : 'the';
@@ -925,6 +925,11 @@ class RecordManager
         $this->log->log('deleteSolrRecords', "Deleting data source '$sourceId' directly from Solr");
         $updater->deleteDataSource($sourceId);
         $this->log->log('deleteSolrRecords', "Deletion of '$sourceId' from Solr completed");
+    }
+    
+    public function deleteSolrCore() {
+    	$updater = new SolrUpdater($this->db, $this->basePath, $this->log, $this->verbose);
+    	$updater->deleteSolrCore();
     }
     
     /**
@@ -1830,7 +1835,7 @@ class RecordManager
         }
         $this->format = $settings['format'];
         $this->sourceId = $source;
-        $this->idPrefix = isset($settings['idPrefix']) && $settings['idPrefix'] ? $settings['idPrefix'] : '.' . $source;
+        $this->idPrefix = isset($settings['idPrefix']) && $settings['idPrefix'] ? $settings['idPrefix'] : $source . '.';
         $this->institution = $settings['institution'];
         $this->recordXPath = isset($settings['recordXPath']) ? $settings['recordXPath'] : '';
         $this->oaiIDXPath = isset($settings['oaiIDXPath']) ? $settings['oaiIDXPath'] : '';

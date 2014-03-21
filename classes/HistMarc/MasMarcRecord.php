@@ -1,18 +1,19 @@
 <?php
-require_once 'PortalMarcRecord.php';
+
+require_once 'HistoricalMarcRecord.php';
 
 /**
- * MarcRecord Class - local customization for cistbrno
+ * MarcRecord Class - local customization for MZK
  *
  * This is a class for processing MARC records.
  *
  * @category DataManagement
  * @package  RecordManager
- * @author   Michal Merta <merta.m@gmail.com>
+ * @author   Michal Merta 
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://github.com/moravianlibrary/RecordManager
  */
-class MuniMarcRecord extends PortalMarcRecord
+class MasMarcRecord extends HistoricalMarcRecord
 {
 
     /**
@@ -25,22 +26,6 @@ class MuniMarcRecord extends PortalMarcRecord
     public function __construct($data, $oaiID, $source)
     {
         parent::__construct($data, $oaiID, $source);
-    }
-
-    public function toSolrArray() {
-        $data = parent::toSolrArray();
-
-        $data['institution'] = $this->getHierarchicalInstitutions('996', 'l');
-        return $data;
-    }
-    
-    public function getID()
-    {
-    	$id = parent::getField('998');
-    	if (empty($id)) {
-    	    $id = parent::getID();
-    	}
-    	return trim($id);
     }
 
 }
