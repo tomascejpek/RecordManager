@@ -300,16 +300,7 @@ class MarcRecord extends BaseRecord
         $data['author_fuller'] = $this->getFieldSubfields('100', array('q'));
         $data['author-letter'] = $this->getFieldSubfields('100', array('a'));
 
-        $data['author2'] = $this->getFieldsSubfields(
-            array(
-                array(MarcRecord::GET_ALT, '100', array('a', 'b', 'c', 'd')),
-                array(MarcRecord::GET_BOTH, '110', array('a', 'b')),
-                array(MarcRecord::GET_BOTH, '111', array('a', 'b')),
-                array(MarcRecord::GET_BOTH, '700', array('a', 'b', 'c', 'd', 'e')),
-                array(MarcRecord::GET_BOTH, '710', array('a', 'b')),
-                array(MarcRecord::GET_BOTH, '711', array('a', 'b'))
-            )
-        );
+        $data['author2'] = $this->getFullAuthor();
         
         $key = array_search($data['author'], $data['author2']);
         if ($key !== false) {
@@ -574,6 +565,23 @@ class MarcRecord extends BaseRecord
             false, true, true
         );
         return $languages;
+    }
+
+    /**
+     * Return author for indexing in author2 solr field
+     *
+     */
+    public function getFullAuthor() {
+        return $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_ALT, '100', array('a', 'b', 'c', 'd')),
+                array(MarcRecord::GET_BOTH, '110', array('a', 'b')),
+                array(MarcRecord::GET_BOTH, '111', array('a', 'b')),
+                array(MarcRecord::GET_BOTH, '700', array('a', 'b', 'c', 'd', 'e')),
+                array(MarcRecord::GET_BOTH, '710', array('a', 'b')),
+                array(MarcRecord::GET_BOTH, '711', array('a', 'b'))
+            )
+        );
     }
 
     /**
