@@ -117,6 +117,24 @@ class PortalMarcRecord extends MarcRecord
     }
     
     /**
+     * Return author for indexing in author2 solr field
+     *
+     */
+    public function getFullAuthor() {
+        return $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_BOTH, '110', array('a', 'b', 'c')),
+                array(MarcRecord::GET_BOTH, '111', array('a', 'b', 'c', 'e', 'q')),
+                array(MarcRecord::GET_BOTH, '700', array('a', 'b', 'c', 'd', 'q')),
+                array(MarcRecord::GET_BOTH, '710', array('a', 'b', 'c')),
+                array(MarcRecord::GET_BOTH, '711', array('a', 'b', 'c', 'e', 'q')),
+                array(MarcRecord::GET_BOTH, '975', array('a', 'b', 'c', 'd', 'q')),
+                array(MarcRecord::GET_BOTH, '976', array('a', 'b', 'c')),
+            )
+        );
+    }
+    
+    /**
      * Return full title
      * 
      * @return string
@@ -445,7 +463,7 @@ class PortalMarcRecord extends MarcRecord
             } else if (strtolower($status) == 'a') { // absent
                 $absent = true;
             }
-            $readyInHours = $this->getSubfield($field, 'n');
+            $readyInHours = $this->getSubfield($field, 'a');
             if ($readyInHours == '0') {
                 $freeStack = true;
             }

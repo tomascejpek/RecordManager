@@ -1851,7 +1851,7 @@ protected function parseXML($xml)
                         }
                     }
                 }
-                if ($firstOnly) {
+                if ($firstOnly && !empty($data)) {
                     break 2;
                 }
             }

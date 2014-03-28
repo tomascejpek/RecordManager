@@ -6,10 +6,16 @@ class MappableMarcRecord extends MarcRecord
     // \029 = ')'
     const METHOD_CALL_REGEX = '/custom, (?<method>[\w]+)\((?<args>[^\029]*)\)(?:,\s*(?<translation>.*)){0,1}/';
     
+    const CONSTANT_DECL_REGEX = '/"(?<constant>[^"]*)"/';
+    
     // example: 645abc:650abd, mod1, mod2
     const MARC_FIELDS_REGEX = '/(?<fields>[\w:]+)(?:\s*,\s*(?<mode>[^,]+)){0,1}(?:\s*,\s*(?<translation>[^,]+)){0,1}/';
     
-    //const RESERVED_MODIFIERS = array('all', 'first');
+    const VAR_FIELD_SPEC = '/(?<field>[\w]{3})(?<subfields>[\w]*)/';
+    
+    const FIXED_FIELD_SPEC = '/(?<field>[\w]{3})(?:\[(?<start>[\d]+)\-(?<end>[\d]+)\])/';
+    
+    const ALL_SUBFIELDS = 'abdefghijklmnopqrstuvwxyz0123456789';
     
     /**
      * Array of parsed mappings keyed by source
@@ -52,49 +58,83 @@ class MappableMarcRecord extends MarcRecord
             $data['fullrecord'] = $this->toXML();
         }
         foreach ($this->mapping as $field => $spec) {
+            $values = array();
             if ($spec['type'] == 'fields') {
                 $mode = $spec['mode'];
+                $values = array();
                 if ($mode == 'all') {
-                    $data[$field] =  $this->getFieldsSubfields($spec['fields']);
+                    $values =  $this->getFieldsSubfields($spec['fields']);
                 } else if ($mode == 'first') {
-                    $data[$field] =  $this->getFirstFieldSubfields($spec['fields']);
-                }
+                    $values =  $this->getFirstFieldSubfields($spec['fields']);
+                } 
             } else if ($spec['type'] == 'method') {
                 $methodName = $spec['method'];
                 $args = $spec['args'];
-                $data[$field] = call_user_func_array(array($this, $methodName), $args);
+                $values = call_user_func_array(array($this, $methodName), $args);
+            } else if ($spec['type'] == 'constant') {
+                $values = $spec['constant'];
             }
+            if (is_scalar($values)) {
+                if (trim($values) !== '') {
+                    $values = array($values);
+                } else {
+                    $values = array();
+                }
+            }
+            if ($values == null) {
+                $values = array();
+            }
+            if (isset($spec['translation'])) {
+                $translated = array();
+                $translation = $spec['translation'];
+                if (empty($values) && isset($translation['##empty'])) {
+                    $translated = $translation['##empty'];
+                }
+                foreach ($values as $value) {
+                    if (isset($translation[$value])) {
+                        $translated[] = $translation[$value];
+                    } else if (isset($translation['##default'])) {
+                        $translated[] = $translation['##default'];
+                    }
+                }
+                $values = $translated;
+            }
+            $data[$field] = $values;
         }
         return $data;
     }
     
     protected static function getMappingBySource($source)
     {
-        if (!isset($mappingCache[$source])) {
+        if (!isset(self::$mappings[$source])) {
             return self::initializeMapping($source);
         } else {
-            return $mappingCache[$source];
+            return self::$mappings[$source];
         }
     }
     
     protected static function initializeMapping($source)
     {
-        global $configArray;
-        if (!isset($configArray['Mapping'][$source])) {
-            throw new Exception("Missing [Mapping][$source] in recordmanager.ini");
+        global $dataSourceSettings;
+        if (!isset($dataSourceSettings[$source]['indexer_properties'])) {
+            throw new Exception("Missing [$source][indexer_properties] in recordmanager.ini");
         }
-        $files = explode(',', $configArray['Mapping'][$source]);
+        $files = explode(',', $dataSourceSettings[$source]['indexer_properties']);
         $finalMap = array();
         // take precedence in the reverse order (to be compatible with SolrMarc)
         // first file has the highest priority
         foreach (array_reverse($files) as $file) {
-            $overrideMap = parse_ini_file('./mapping/' . trim($file), false, INI_SCANNER_RAW);
+            $file = trim($file);
+            $overrideMap = parse_ini_file("./marc_mapping/{$file}", false, INI_SCANNER_RAW);
             if ($overrideMap) {
                 $finalMap = array_merge((array) $finalMap, (array) $overrideMap);
+            } else {
+                throw new Exception('');
             }
         }
         $finalMap = self::parseMapping($finalMap);
         self::$mappings[$source] = $finalMap;
+        var_export($finalMap);
         return $finalMap;
     }
     
@@ -103,6 +143,7 @@ class MappableMarcRecord extends MarcRecord
         $mapping = array();
         foreach ($config as $key => $value) {
             $matches = array();
+            $conf = array();
             if (preg_match(self::METHOD_CALL_REGEX, $value, $matches)) {
                 $args = explode(',', $matches['args']);
                 foreach ($args as &$arg) {
@@ -113,31 +154,45 @@ class MappableMarcRecord extends MarcRecord
                     'method' => $matches['method'],
                     'args'   => $args
                 );
-                if (isset($matches['translation'])) {
-                    $conf['translation'] = $matches['translation']; 
-                }
                 $mapping[$key] = $conf;
+            } else if (preg_match(self::CONSTANT_DECL_REGEX, $value, $matches)) {
+                $conf = array(
+                    'type'   => 'constant',
+                    'fields' => $matches['constant']
+                );
             } else if (preg_match(self::MARC_FIELDS_REGEX, $value, $matches)) {
                 $results = array();
                 $fields = explode(':', $matches['fields']);
                 foreach ($fields as $field) {
-                    $fieldNo = substr($field, 0, 3);
-                    $subfields = substr($field, 3);
-                    $results[] = array(MarcRecord::GET_NORMAL, $fieldNo, str_split($subfields));
-                }  
+                    $args = array();
+                    if (preg_match(self::VAR_FIELD_SPEC, $field, $args)) {
+                        $fieldNo = $args['field'];
+                        $subfields = self::ALL_SUBFIELDS;
+                        if (isset($args['subfields'])) {
+                            $subfields = $args['subfields'];
+                        }
+                        $results[] = array(MarcRecord::GET_NORMAL, $fieldNo, str_split($subfields));
+                    }
+                }
                 $conf = array(
                     'type'   => 'fields',
-                    'fields' => $results
+                    'fields' => $results,
                 );
                 $conf['mode'] = 'all';
                 if (isset($matches['mode'])) {
                     $conf['mode'] = $matches['mode'];
                 }
-                if (isset($matches['translation'])) {
-                    $conf['translation'] = $matches['translation']; 
-                }
-                $mapping[$key] = $conf;
+            } else {
+                throw new Exception('Unsupported mapping:' . $key);
             }
+            if (isset($matches['translation'])) {
+                $file = $matches['translation'];
+                $translation = parse_ini_file("./translation_maps/{$file}", false, INI_SCANNER_RAW);
+                if ($translation) {
+                    $conf['translation'] = $translation;
+                }
+            }
+            $mapping[$key] = $conf;
         }
         return $mapping;
     }
