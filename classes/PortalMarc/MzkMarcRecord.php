@@ -136,4 +136,41 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         return 'Other';
     }
 
+    public function getSecondCallNumbers()
+    {
+        $locations = $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '996', array('h')),
+            )
+        );
+        foreach($locations as &$location) {
+            $location = str_replace(' ', '|', $location);
+        }
+        return $locations;
+    }
+
+    public function getVisible()
+    {
+        // MZK field is remapped to 991 in OAI
+        $mzkHidden = $this->getFieldSubfields('991', array('s'));
+        if ($mzkHidden == 'SKRYTO') {
+            return 'hidden';
+        }
+        // FMT field is remapped to 990 in OAI and is control field
+        $format = $this->getField('990');
+        if ($format == 'AZ') {
+            return 'hidden';
+        }
+        // STA field is remapped to 992 in OAI
+        $sta = $this->getFieldSubfields('992', array('a'));
+        if (self::startsWith($sta, 'SUPPRESSED') || self::startsWith($sta, 'SKRYTO')) {
+            return 'hidden';
+        }
+        return 'visible';
+    }
+
+    public static function startsWith($haystack, $needle) {
+        return substr($haystack, 0, strlen($needle)) === $needle;
+    }
+
 }
