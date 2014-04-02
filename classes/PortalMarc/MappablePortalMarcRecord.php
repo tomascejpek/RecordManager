@@ -91,25 +91,30 @@ class MappablePortalMarcRecord extends MappableMarcRecord
             $statuses[] = 'present';
         }
         if ($freeStack && !empty($statuses)) {
-            $statuses[] = 'free-stack';
+            $statuses[] = 'free_stack';
         }
-        return $statuses;
     }
     
     public function getPublishDate()
     {
-        $years = $this->getPublishDateFromItems('996', 'w');
+        $years = $this->getPublishDateFromItems('996', 'y');
         if (!empty($years)) {
             return $years;
         }
         $years = array();
         $field008 = $this->getField('008');
-        if ($field008 == null || strlen($field008)< 16) {
+        if ($field008 == null || strlen($field008) < 16) {
             return null;
         }
-        $type = substr($field008, 6, 7);
-        $from = intval(substr($field008, 7, 11));
-        $to = intval(substr($field008, 11, 15));
+        $type = substr($field008, 6, 1);
+        $from = substr($field008, 7, 4);
+        $from = intval(str_replace(array('u', '?', ' '), '0', $from));
+        $to = substr($field008, 11, 4);
+        if (trim($to) == '' || $type == 'e') {
+            $to = $from;
+        } else {
+            $to = intval(str_replace(array('u', '?', ' '), '9', $to));
+        }
         if ($from == 0 && $to == 0) {
             return $years;
         }
@@ -121,9 +126,6 @@ class MappablePortalMarcRecord extends MappableMarcRecord
         }
         if ($to > 2013) {
             $to = 2013;
-        }
-        if ($type == "e") {
-            $to = $from;
         }
         for ($year = $from; $year <= $to; $year+=1) {
             $years[] = sprintf("%04d", $year);
@@ -242,7 +244,7 @@ class MappablePortalMarcRecord extends MappableMarcRecord
             )
         );
     }
-    
+
     public function getAllSubfieldsWithIndicator($specs)
     {
         $result = array();
@@ -273,7 +275,7 @@ class MappablePortalMarcRecord extends MappableMarcRecord
         }
         return $result;
     }
-    
+
     public function getTitleShort()
     {
         $title = $this->getFirstFieldSubfields(array(
@@ -286,7 +288,7 @@ class MappablePortalMarcRecord extends MappableMarcRecord
         */
         return $title;
     }
-    
+
     public function getSecondCallNumber()
     {
         $callNo2 = $this->getFieldsSubfields(array(
@@ -295,18 +297,19 @@ class MappablePortalMarcRecord extends MappableMarcRecord
         $callNo2 = str_replace(' ', '|', $callNo2);
         return $callNo2;
     }
-    
+
     public function getConspectusCategory()
     {
         return $this->getConspectusField('9');
     }
-    
+
     public function getConspectusSubcategory()
     {
         return $this->getConspectusField('x');
     }
-    
-    public function getConspectusField($subfield) {
+
+    public function getConspectusField($subfield)
+    {
         foreach ($this->getFields('072') as $field) {
             $type = $this->getSubfield($field, '2');
             if ($type == 'Konspekt') {
@@ -315,5 +318,18 @@ class MappablePortalMarcRecord extends MappableMarcRecord
         }
         return null;
     }
-    
+
+    public function getScale()
+    {
+        $scale = $this->getFieldSubfields('034', array('b'));
+        if ($scale == null) {
+            return null;
+        }
+        $scale = str_replace(' ', '', $scale);
+        if (is_numeric($scale)) {
+            return $scale;
+        }
+        return null;
+    }
+
 }

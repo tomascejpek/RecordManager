@@ -60,6 +60,16 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         return $this->getField('998');
     }
     
+    public function getStatuses()
+    {
+        $statuses = parent::getStatuses();
+        $eod = $this->getFieldSubfields('993', array('a'));
+        if ($eod == 'Y') {
+            $statuses[] = 'available_for_eod';
+        }
+        return $statuses;
+    }
+    
     /**
      * Dedup: Return format from predefined values
      *
@@ -167,6 +177,78 @@ class MzkMarcRecord extends MappablePortalMarcRecord
             return 'hidden';
         }
         return 'visible';
+    }
+    
+    public function getAcquisitionDate()
+    {
+        $mzkAcqDate = $this->getFieldSubfields('991', array('b'));
+        if ($mzkAcqDate == null) {
+            return null;
+        }
+        $mzkAcqDate = trim($mzkAcqDate);
+        if (strlen($mzkAcqDate) > 6) {
+            $mzkAcqDate = substr($mzkAcqDate, 0, 6);
+        }
+        if (is_numeric($mzkAcqDate)) {
+            return $mzkAcqDate;
+        }
+        return null;
+    }
+    
+    public function getBases()
+    {
+        static $allowedBases = array(
+            'MZK01' => array("33", "44", "99"),
+            'MZK03' => array("mzk", "rajhrad", "znojmo", "trebova"),
+        );
+        global $dataSourceSettings;
+        $base = $dataSourceSettings[$this->source]['base'];
+        $firstBase = 'facet_base_' . $base;
+        $bases = array($firstBase);
+        $secBase = $this->getFieldSubfields('991', ($base == 'MZK01') ? array('x') : array('k'));
+        if ($secBase != null && isset($allowedBases[$base][$secBase])) {
+            $bases += $base . '_' . $secBase;
+        }
+        return $bases;
+    }
+    
+    public function getSysno()
+    {
+        return $this->getField('998');
+    }
+    
+    public function getAuthorAndTitle()
+    {
+        $author = $this->getFieldSubfields('100', array('a', 'd'));
+        $title = $this->getFieldSubfields('245', array('a'));
+        if ($author != null && $title != null) {
+            return $author . ": " . $title;
+        }
+        return null;
+        
+    }
+    
+    public function getRelevancy()
+    {
+        $relevancy = "default";
+        // platnost normy
+        $summary = $this->getFieldSubfields('520', array('a'));
+        if ($summary != null && $summary == "Norma je neplatná") {
+            $relevancy = "invalid_norm";
+        }
+        // vychazejici casopisy ci noviny
+        /*
+        $pse = $this->getFirstFieldVal('PSE', array('q'));
+        if (pse != null && $pse == currentYearTwoDigits) {
+            $relevancy = "live_periodical";
+        }
+        */
+        // hovadiny
+        $sig = $this->getFieldSubfields('910', array('b'));
+        if ($sig != null && self::startsWith($sig, 'UP')) {
+            $relevancy = "rubbish";
+        }
+        return $relevancy;
     }
 
     public static function startsWith($haystack, $needle) {
