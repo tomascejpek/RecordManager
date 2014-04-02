@@ -93,6 +93,7 @@ class MappablePortalMarcRecord extends MappableMarcRecord
         if ($freeStack && !empty($statuses)) {
             $statuses[] = 'free_stack';
         }
+        return $statuses;
     }
     
     public function getPublishDate()

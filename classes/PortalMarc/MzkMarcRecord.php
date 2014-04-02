@@ -67,6 +67,22 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         if ($eod == 'Y') {
             $statuses[] = 'available_for_eod';
         }
+        $links = $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '996', array('u')), // really in 996?
+                array(MarcRecord::GET_NORMAL, '856', array('u')),
+            )
+        );
+        $online = false;
+        foreach ($links as $link) {
+            if (self::startsWith($link, "http://kramerius.mzk.cz/") ||
+                 self::startsWith($link, "http://imageserver.mzk.cz/")) {
+                $online = true;
+            }
+        }
+        if ($online) {
+            $statuses[] = 'available_online';
+        }
         return $statuses;
     }
     
