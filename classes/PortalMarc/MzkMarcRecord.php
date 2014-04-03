@@ -99,12 +99,30 @@ class MzkMarcRecord extends MappablePortalMarcRecord
      */
     public function getFormat()
     {
-    
-        $leaderFormat = substr($this->getField('000'), 5, 8);
-        if ($leaderFormat == "nai" || $leaderFormat == "cai") {
+        $electronic = $this->getFieldSubfields('245', array('h'));
+        if ($electronic != null && strpos(strtolower($electronic),
+            '[electronic resource]') !== FALSE) {
+            return 'Electronic';
+        }
+
+        // 990 in OAI = FMT field
+        $format = $this->getField('990');
+        if ($format == 'AZ') {
+            return 'Article';
+        }
+
+        // 991 in OAI = MZK field
+        $norm = $this->getFieldSubfields('991', array('n'));
+        if ($norm != null) {
+            return 'Norm';
+        }
+
+        $leader = $this->getField('000');
+        $leaderFormat = substr($leader, 5, 3);
+        if ($leaderFormat == 'nai' || $leaderFormat == 'cai') {
             return 'LawsOrOthers';
         }
-    
+
         // check the Leader at position 6
         $leader = $this->getField('000');
         $leaderBit = substr($leader, 6, 1);
@@ -134,7 +152,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
             case 'T':
                 return 'Manuscript';
         }
-    
+
         // check the Leader at position 7
         $leaderBit = substr($leader, 7, 1);
         switch (strtoupper($leaderBit)) {
@@ -143,23 +161,8 @@ class MzkMarcRecord extends MappablePortalMarcRecord
                 return 'Book';
             case 'S':
                 return 'NewspaperOrJournal';
-            case 'A':
-                // Component part in monograph
-                return 'BookSection';
-            case 'B':
-                // Component part in serial
-                return 'Article';
-            case 'C':
-                // Collection
-                return 'Collection';
-            case 'D':
-                // Component part in collection (sub unit)
-                return 'SubUnit';
-            case 'I':
-                // Integrating resource
-                return 'ContinuouslyUpdatedResource';
         }
-        return 'Other';
+        return 'Unknown';
     }
 
     public function getSecondCallNumbers()
