@@ -329,5 +329,13 @@ class BaseRecord
     {
         return true;
     }
+       
+    /**
+     * Decides whether record needs some king of special treatment
+     * @return String with name of special type, NULL if any
+     */
+    public function getSpecialRecordType() {
+    	return null;
+    }
 }
 

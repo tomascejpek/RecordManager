@@ -43,6 +43,15 @@ require_once __DIR__.'/../Logger.php';
  */
 class VnfMarcRecord extends MarcRecord
 {
+   
+    protected function getInstitution() {
+        if (isset($this->settings) && isset($this->settings['institution'])) {
+            return $this->settings['institution'];
+        } else {
+            throw new Exception("No institution name set for datasource: $this->source");
+        }
+    }
+
     public function toSolrArray() {
         
         $data = parent::toSolrArray();
@@ -64,7 +73,9 @@ class VnfMarcRecord extends MarcRecord
                 $data['publishDate_display'] = $matches[1];
             }
         }
-        
+       
+        $data['institutionAlbumsOnly_txtF'] = $this->getInstitution();
+         
         return $data;
     }
 

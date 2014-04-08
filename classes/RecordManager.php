@@ -578,6 +578,12 @@ class RecordManager
                             echo '.';
                         }
                     }
+                    
+                    if (isset($record['specType'])) {
+                    	if ($record['specType'] == 'sup_record') {
+                    		continue;
+                    	} 
+                    }
                     if (microtime(true) - $startRecordTime > 0.7) {
                         if ($this->verbose) {
                             echo "\n";
@@ -1074,7 +1080,10 @@ class RecordManager
                 }
             }
             
-            
+            $specType = $metadataRecord->getSpecialRecordType();
+            if ($specType != null) {
+            	$dbRecord['specType'] = $specType;
+            }
             $dbRecord['date'] = $dbRecord['updated'];
             if ($normalizedData) {
                 if ($originalData == $normalizedData) {
@@ -1673,6 +1682,7 @@ class RecordManager
     protected function removeFromDedupRecord($dedupId, $id)
     {
         $record = $this->db->dedup->findOne(array('_id' => $dedupId));
+        if ($record == null) return;
         if (in_array($id, $record['ids'])) {
             $record['ids'] = array_values(array_diff($record['ids'], array($id)));
             

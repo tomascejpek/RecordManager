@@ -53,4 +53,74 @@ class SupMarcRecord extends VnfMarcRecord
     {
         parent::__construct($data, $oaiID, $source);
     }
+    
+    public function toSolrArray() {
+        $data = parent::toSolrArray();
+        if ($this->isAlbum()) {
+            $data['format'] = 'Supraphon Album';
+        } else {
+            $data['format'] = 'Sound Record';
+            unset($data['institutionAlbumsOnly_txtF']);
+        }
+        
+        $fields = $this->getFields('LKR');
+        if (is_array($fields)) {    
+            $prefix = isset($this->settings['idPrefix']) ? $this->settings['idPrefix'] : $this->settings['format'];
+            if (substr($prefix, -1) != '.') {
+                $prefix .= '.';
+            }
+            foreach ($fields as $field) {
+                $type = $this->getSubfield($field, 'a');
+                if ($type == 'UP') {
+                    $data['sup_uplink'] = isset($data['sup_uplink']) ? $data['sup_uplink'] : array();
+                    $data['sup_uplink'][] = $prefix . $this->getSubfield($field, 'b'); 
+                } else if ($type == 'DOWN') {
+                    $data['sup_downlinks'] = isset($data['sup_downlinks']) ? $data['sup_downlinks'] : array();
+                    $data['sup_downlinks'][] = $prefix . $this->getSubfield($field, 'b');
+                }
+            }
+        }
+
+	if ($this->isAlbum()) {
+	    $path = $this->getImagePath(ltrim($this->getID(), '0'));
+            if (!empty($path)) {
+                if (isset($this->settings['labelsDirectory'])) {
+                    $labelsDir = $this->settings['labelsDirectory'];
+
+                    $pathLen = strlen($labelsDir);
+                    if ($labelsDir[$pathLen -1] == '/') {
+                        $labelsDir = substr($labelsDir, 0, -1);
+                    }
+                    
+                    if (file_exists($labelsDir . $path)) {
+                        $data['label_path_str'] = $path;
+                    }
+                }
+            }
+        }
+        return $data;
+    }
+    
+    public function getSpecialRecordType() {
+    	return $this->isAlbum() ? 'sup_record' : null;
+    }
+
+    protected function isAlbum() {
+        $field = $this->getField('000');
+        if (is_string($field) || strlen($field) >= 22) {
+                return $field[21] == 'c' ? false : true;
+        }
+        return true;
+    }
+
+    public function getImagePath($id, $size = 'medium')
+    {
+        $part = '';
+        for ($i = 2; $i <= strlen($id); $i+=2) {
+            $part .= '/' . $id[$i-2] . $id[$i-1];
+        }
+        $part .= '/' . $id . '-' . $size . '.jpg';
+        return $part;
+    }
+
 }
