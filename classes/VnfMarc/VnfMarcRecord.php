@@ -51,6 +51,25 @@ class VnfMarcRecord extends MarcRecord
             throw new Exception("No institution name set for datasource: $this->source");
         }
     }
+    
+    /**
+     * adds field 028 to unique ids
+     * @see MarcRecord::getUniqueIDs()
+     */
+    public function getUniqueIDs() {
+        $uIds = parent::getUniqueIDs();
+        $field = $this->getField('028');
+        if ($field) {
+            $subA = $this->getSubfield($field, 'a');
+            $subB = $this->getSubfield($field, 'b');
+            if (empty($subA) || empty($subB)) {
+                return $uIds;
+            }
+            $subB = explode(' ', $subB); 
+            $uIds[] = '(kat)' . MetadataUtils::normalize($subA. $subB[0]);
+        }
+        return $uIds;
+    }
 
     public function toSolrArray() {
         
