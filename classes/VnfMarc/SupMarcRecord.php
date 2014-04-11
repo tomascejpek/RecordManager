@@ -56,13 +56,21 @@ class SupMarcRecord extends VnfMarcRecord
     
     public function toSolrArray() {
         $data = parent::toSolrArray();
-        if ($this->isAlbum()) {
-            $data['format'] = 'Supraphon Album';
+        $format = $this->getFormat();
+        if (empty($format)) {
+            if ($this->isAlbum()) {
+                $data['format'] = 'Supraphon Album';
+            } else {
+                $data['format'] = 'Sound Record';
+            }
         } else {
-            $data['format'] = 'Sound Record';
-            unset($data['institutionAlbumsOnly_txtF']);
+            $data['format'] = $format;
         }
-        
+       
+        if (!$this->isAlbum()) {
+            unset($data['institutionAlbumsOnly']);
+        }
+ 
         $fields = $this->getFields('LKR');
         if (is_array($fields)) {    
             $prefix = isset($this->settings['idPrefix']) ? $this->settings['idPrefix'] : $this->settings['format'];
@@ -80,7 +88,7 @@ class SupMarcRecord extends VnfMarcRecord
                 }
             }
         }
-
+	
 	if ($this->isAlbum()) {
 	    $path = $this->getImagePath(ltrim($this->getID(), '0'));
             if (!empty($path)) {
@@ -98,7 +106,17 @@ class SupMarcRecord extends VnfMarcRecord
                 }
             }
         }
+
         return $data;
+    }
+    
+    public function getFormat() {
+        $field = $this->getField('FCT');
+        if ($field) {
+            $subA = $this->getSubfield($field, 'a');
+            return $subA;
+        }
+        return '';
     }
     
     public function getSpecialRecordType() {

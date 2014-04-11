@@ -74,7 +74,7 @@ class VnfMarcRecord extends MarcRecord
             }
         }
        
-        $data['institutionAlbumsOnly_txtF'] = $this->getInstitution();
+        $data['institutionAlbumsOnly'] = $this->getInstitution();
          
         return $data;
     }
