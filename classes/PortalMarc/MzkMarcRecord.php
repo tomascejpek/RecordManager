@@ -57,7 +57,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
      */
     public function getID()
     {
-        return $this->getField('998');
+        return $this->getField('001');
     }
     
     public function getStatuses()
@@ -208,7 +208,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         if (strlen($mzkAcqDate) > 6) {
             $mzkAcqDate = substr($mzkAcqDate, 0, 6);
         }
-        if (is_numeric($mzkAcqDate)) {
+        if (ctype_digit($mzkAcqDate)) {
             return $mzkAcqDate;
         }
         return null;
@@ -225,8 +225,8 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         $firstBase = 'facet_base_' . $base;
         $bases = array($firstBase);
         $secBase = $this->getFieldSubfields('991', ($base == 'MZK01') ? array('x') : array('k'));
-        if ($secBase != null && isset($allowedBases[$base][$secBase])) {
-            $bases += $base . '_' . $secBase;
+        if ($secBase != null && in_array($secBase, $allowedBases[$base])) {
+            $bases[] = $firstBase . '_' . $secBase;
         }
         return $bases;
     }
