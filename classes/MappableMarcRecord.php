@@ -134,7 +134,6 @@ class MappableMarcRecord extends MarcRecord
         }
         $finalMap = self::parseMapping($finalMap);
         self::$mappings[$source] = $finalMap;
-        var_export($finalMap);
         return $finalMap;
     }
     
