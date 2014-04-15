@@ -2020,4 +2020,34 @@ class RecordManager
         $this->log->log('completeRecords', "$linkCount links successfully completed in $recordCount records", Logger::INFO);
         $this->db->links->remove();
     }
+    
+    /**
+     * updates deduplication keys for stored records
+     * @param $source
+     */
+    public function updateDedupKeys($source) 
+    {
+        $this->loadSourceSettings($source);
+        $count = 0;
+        $buffer = array();
+        $records = $this->db->record->find(array('source_id' => $source));
+        foreach ($records as $record) {
+            $content = MetadataUtils::getRecordData($record, true);
+            $metadataRecord = RecordFactory::createRecord($this->format, $content, '', $this->sourceId);
+            $this->updateDedupCandidateKeys($record, $metadataRecord);
+            
+            $record['update_needed'] = true;
+            $dbRecord['updated'] = new MongoDate();
+            unset($record['dedup_id']);
+            $buffer[] = $record;
+            if (count($buffer) > 100) {
+                $this->db->record->save($buffer);
+                $buffer = array();
+            }
+            if (++$count % 1000 == 0) {
+                print($count . ' updated' . PHP_EOL);
+            }
+        }
+        $this->db->record->save($buffer);
+    }
 }

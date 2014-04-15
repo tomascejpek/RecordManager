@@ -114,6 +114,9 @@ EOT;
             case 'checkdedup':
                 $manager->checkDedupRecords();
                 break;
+            case 'updatekeys':
+                $manager->updateDedupKeys($source);
+                break;
             default: 
                 echo 'Unknown func: ' . $params['func'] . "\n"; 
                 exit(1);
