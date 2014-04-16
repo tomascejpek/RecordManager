@@ -1316,7 +1316,7 @@ class MarcRecord extends BaseRecord
                $newField['s'][] = array((string)$subfield['code'] => (string)$subfield);
            }
            $tag = (string) $field['tag'];
-           if ($tag != '000') {
+           if (substr($tag, 0, 2) != '00') {
                $this->fields[$tag][] = $newField;
            }
        }
