@@ -32,8 +32,9 @@ class MzkNormsMarcRecord extends MzkMarcRecord
     public function __construct($data, $oaiID, $source)
     {
         parent::__construct($data, $oaiID, $source);
-        list($oai, $domain, $id)= explode(':', $oaiID);
-        $this->id = $id;
+        list($oai, $domain, $ident) = explode(':', $oaiID);
+        list($base, $sysno) = explode('-', $ident);
+        $this->id = $sysno;
     }
     
     /**
