@@ -1274,7 +1274,7 @@ class MarcRecord extends BaseRecord
         }
     }
 */
-protected function parseXML($xml) 
+    protected function parseXML($xml)
     {
        $document = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOENT);
        if ($document === false) {
@@ -1315,7 +1315,10 @@ protected function parseXML($xml)
            foreach ($subfieldQuery as $subfield) {
                $newField['s'][] = array((string)$subfield['code'] => (string)$subfield);
            }
-           $this->fields[(string)$field['tag']][] = $newField;
+           $tag = (string) $field['tag'];
+           if ($tag != '000') {
+               $this->fields[$tag][] = $newField;
+           }
        }
     }
 
