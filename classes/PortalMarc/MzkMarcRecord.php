@@ -218,7 +218,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
     {
         static $allowedBases = array(
             'MZK01' => array("33", "44", "99"),
-            'MZK03' => array("mzk", "rajhrad", "znojmo", "trebova"),
+            'MZK03' => array("mzk", "rajhrad", "znojmo", "trebova", "dacice"),
         );
         global $dataSourceSettings;
         $base = $dataSourceSettings[$this->source]['base'];
