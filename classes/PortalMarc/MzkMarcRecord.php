@@ -114,7 +114,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         foreach ($fields655 as $field) {
             $sa = $this->getSubfield($field, 'a');
             $s7 = $this->getSubfield($field, 'x');
-            if (!empty($sa) && !empty($s7) && strtolower($a) == 'fotografie'
+            if (!empty($sa) && !empty($s7) && strtolower($sa) == 'fotografie'
                 && strtolower($s7) == 'fd132277') {
                 return 'Photography';
             }
