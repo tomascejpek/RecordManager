@@ -28,7 +28,8 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         parent::__construct($data, $oaiID, $source);
     }
 
-    public function toSolrArray() {
+    public function toSolrArray()
+    {
         $data = parent::toSolrArray();
         return $data;
     }
