@@ -100,6 +100,27 @@ class MzkMarcRecord extends MappablePortalMarcRecord
      */
     public function getFormat()
     {
+        // photography
+        $fields072 = $this->getFields('072');
+        foreach ($fields072 as $field) {
+            $sa = $this->getSubfield($field, 'a');
+            $sx = $this->getSubfield($field, 'x');
+            if (!empty($sa) && !empty($sx) && strtolower($sa) == '77'
+                && strtolower($sx) == 'fotografie') {
+                return 'Photography';
+            }
+        }
+        $fields655 = $this->getFields('655');
+        foreach ($fields655 as $field) {
+            $sa = $this->getSubfield($field, 'a');
+            $s7 = $this->getSubfield($field, 'x');
+            if (!empty($sa) && !empty($s7) && strtolower($a) == 'fotografie'
+                && strtolower($s7) == 'fd132277') {
+                return 'Photography';
+            }
+        }
+
+        // electronic resource
         $electronic = $this->getFieldSubfields('245', array('h'));
         if ($electronic != null && strpos(strtolower($electronic),
             '[electronic resource]') !== FALSE) {
@@ -194,6 +215,11 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         // STA field is remapped to 992 in OAI
         $sta = $this->getFieldSubfields('992', array('a'));
         if (self::startsWith($sta, 'SUPPRESSED') || self::startsWith($sta, 'SKRYTO')) {
+            return 'hidden';
+        }
+        // BAS field is remapped to 995 in OAI (acquisition order)
+        $bas = $this->getFieldSubfields('995', array('a'));
+        if (self::startsWith($bas, 'AK')) {
             return 'hidden';
         }
         return 'visible';
