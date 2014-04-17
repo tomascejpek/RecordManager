@@ -134,6 +134,16 @@ class MappablePortalMarcRecord extends MappableMarcRecord
         return $years;
     }
     
+    public function getPublishDateForSorting()
+    {
+        $years = $this->getPublishDate();
+        if (!empty($years)) {
+            return min($years);
+        } else {
+            return null;
+        }
+    }
+
     public function getPublishDateFromItems($field, $subfield)
     {
         $result = array();
