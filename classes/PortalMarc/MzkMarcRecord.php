@@ -58,7 +58,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
      */
     public function getID()
     {
-        return $this->getField('001');
+        return $this->getField('998');
     }
     
     public function getStatuses()
