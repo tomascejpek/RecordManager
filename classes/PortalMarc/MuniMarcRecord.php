@@ -31,6 +31,12 @@ class MuniMarcRecord extends PortalMarcRecord
         $data = parent::toSolrArray();
 
         $data['institution'] = $this->getHierarchicalInstitutions('996', 'l');
+        if (isset($data['institution'][1])) {
+            // map FF-S, FF-K, FF-HUD to FF
+            if (preg_match('/^1\/MUNI\/FF/',$data['institution'][1])) {
+                $data['institution'][1] = '1/MUNI/FF';
+            }
+        }
         return $data;
     }
     
