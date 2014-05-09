@@ -1845,7 +1845,7 @@ class RecordManager
         }
         $this->format = $settings['format'];
         $this->sourceId = $source;
-        $this->idPrefix = isset($settings['idPrefix']) && $settings['idPrefix'] ? $settings['idPrefix'] : $source . '.';
+        $this->idPrefix = isset($settings['idPrefix']) && $settings['idPrefix'] ? $settings['idPrefix'] . '.' : $source . '.';
         $this->institution = $settings['institution'];
         $this->recordXPath = isset($settings['recordXPath']) ? $settings['recordXPath'] : '';
         $this->oaiIDXPath = isset($settings['oaiIDXPath']) ? $settings['oaiIDXPath'] : '';
@@ -2037,7 +2037,7 @@ class RecordManager
             $this->updateDedupCandidateKeys($record, $metadataRecord);
             
             $record['update_needed'] = true;
-            $dbRecord['updated'] = new MongoDate();
+            $record['updated'] = new MongoDate();
             unset($record['dedup_id']);
             $buffer[] = $record;
             if (count($buffer) > 100) {
