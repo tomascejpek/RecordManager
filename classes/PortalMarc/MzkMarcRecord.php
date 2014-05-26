@@ -34,6 +34,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
     public function toSolrArray()
     {
         $data = parent::toSolrArray();
+        $data['institution'] = "0/MZK";
         return $data;
     }
 
