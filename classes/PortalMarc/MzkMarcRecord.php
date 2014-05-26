@@ -26,6 +26,9 @@ class MzkMarcRecord extends MappablePortalMarcRecord
     public function __construct($data, $oaiID, $source)
     {
         parent::__construct($data, $oaiID, $source);
+        list($oai, $domain, $ident) = explode(':', $oaiID);
+        list($base, $sysno) = explode('-', $ident);
+        $this->id = $sysno;
     }
 
     public function toSolrArray()
@@ -38,7 +41,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
     {
         return $this->getFieldSubfields('996', array('b'));
     }
-    
+
     public function getAvailabilityId()
     {
         $holdings = $this->getFields('996');
@@ -58,9 +61,14 @@ class MzkMarcRecord extends MappablePortalMarcRecord
      */
     public function getID()
     {
-        return $this->getField('998');
+        return $this->id;
     }
-    
+
+    public function getLinkingID()
+    {
+        return $this->id;
+    }
+
     public function getStatuses()
     {
         $statuses = parent::getStatuses();
