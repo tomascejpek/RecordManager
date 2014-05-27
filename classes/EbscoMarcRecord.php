@@ -21,4 +21,9 @@ class EbscoMarcRecord extends MappablePortalMarcRecord
         return $this->getField('001');
     }
 
+    public function getFormat()
+    {
+        return array('Ebook');
+    }
+
 }
