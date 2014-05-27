@@ -343,4 +343,13 @@ class MappablePortalMarcRecord extends MappableMarcRecord
         return null;
     }
 
+    public function getEAN()
+    {
+        return $this->getAllSubfieldsWithIndicator(
+            array(
+                array('024', '3',  null,  array('a')),
+            )
+        );
+    }
+
 }
