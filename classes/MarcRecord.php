@@ -1245,7 +1245,7 @@ class MarcRecord extends BaseRecord
        if ($document === false) {
              throw new Exception('MarcRecord: failed to parse from XML');
        }
-       
+
        $namespaces = $document->getNamespaces(false);
        $namespace = '';
        if (is_array($namespaces)) {
@@ -1257,7 +1257,7 @@ class MarcRecord extends BaseRecord
                }
            }
        }
-       
+
        $query = $document->xpath($namespace.'leader');
        if ($query !== false && count($query) > 0) {
            $this->fields['000'] = (string) $query[0];
@@ -1419,29 +1419,31 @@ class MarcRecord extends BaseRecord
     	$leader = str_pad(substr($this->fields['000'], 0, 24), 24);
     	$result = "LDR  $leader\n";
     	foreach ($this->fields as $tag => $fields) {
-    		if ($tag == '000') {
-    			continue;
-    		}
-    		if (strlen($tag) != 3) {
-    			error_log("Invalid field tag: '$tag', id " . $this->getField('001'));
-    			continue;
-    		}
-    		foreach ($fields as $field) {
-    			$fieldStr = $tag;
-    			if (is_array($field)) {
-    				$fieldStr .= empty($field['i1']) ? ' ' : $field['i1'];
-    				$fieldStr .= empty($field['i2']) ? ' ' : $field['i2'];
-    				if (isset($field['s']) && is_array($field['s'])) {
-    					foreach ($field['s'] as $subfield) {
-    						$subfieldCode = key($subfield);
-    						$fieldStr .= '$' . $subfieldCode . current($subfield);
-    					}
-    				}
-    			} else {
-    				$fieldStr .= '  ' . trim($field);
-    			}
-    			$result .= $fieldStr . "\n";
-    		}
+            if ($tag == '000') {
+                continue;
+            }
+            if (strlen($tag) != 3) {
+                error_log("Invalid field tag: '$tag', id " . $this->getField('001'));
+                continue;
+            }
+
+            foreach (is_array($fields) ? $fields : array($fields) as $field) {
+                $fieldStr = $tag;
+                if (is_array($field)) {
+                    $fieldStr .= empty($field['i1']) ? ' ' : $field['i1'];
+                    $fieldStr .= empty($field['i2']) ? ' ' : $field['i2'];
+                    if (isset($field['s']) && is_array($field['s'])) {
+                        foreach ($field['s'] as $subfield) {
+                            $subfieldCode = key($subfield);
+                            $fieldStr .= '$' . $subfieldCode . current($subfield);
+                        }
+                    }
+                } else {
+                    $fieldStr .= '  ' . trim($field);
+                }
+                    $result .= $fieldStr . "\n";
+            }
+
     	}
     	return $result;
     }
