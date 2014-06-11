@@ -343,6 +343,47 @@ class MappablePortalMarcRecord extends MappableMarcRecord
         return null;
     }
 
+    public function getBoundingBox()
+    {
+        $field = $this->getField('034');
+        if ($field) {
+            $westOrig = $this->getSubfield($field, 'd');
+            $eastOrig = $this->getSubfield($field, 'e');
+            $northOrig = $this->getSubfield($field, 'f');
+            $southOrig = $this->getSubfield($field, 'g');
+            $west = MetadataUtils::coordinateToDecimal($westOrig);
+            $east = MetadataUtils::coordinateToDecimal($eastOrig);
+            $north = MetadataUtils::coordinateToDecimal($northOrig);
+            $south = MetadataUtils::coordinateToDecimal($southOrig);
+
+            if (!is_nan($west) && !is_nan($north)) {
+                if (!is_nan($east)) {
+                    $longitude = ($west + $east) / 2;
+                } else {
+                    $longitude = $west;
+                }
+
+                if (!is_nan($south)) {
+                    $latitude = ($north + $south) / 2;
+                } else {
+                    $latitude = $north;
+                }
+                if (($longitude < -180 || $longitude > 180) || ($latitude < -90 || $latitude > 90)) {
+                    global $logger;
+                    $logger->log('MarcRecord', "Discarding invalid coordinates $longitude,$latitude decoded from w=$westOrig, e=$eastOrig, n=$northOrig, s=$southOrig, record {$this->source}." . $this->getID(), Logger::WARNING);
+                } else {
+                    global $logger;
+                    if (!$north || !$south || !$east || !$west) {
+                        $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." missig coordinate w=$west e=$east n=$north s=$south", Logger::WARNING);
+                    } else {
+                        return $west . ' ' . $south . ' ' . $east . ' ' . $north;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     public function getEAN()
     {
         return $this->getAllSubfieldsWithIndicator(
