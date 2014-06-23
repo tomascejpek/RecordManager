@@ -29,6 +29,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         list($oai, $domain, $ident) = explode(':', $oaiID);
         list($base, $sysno) = explode('-', $ident);
         $this->id = $sysno;
+        $this->sysno = $sysno;
     }
 
     public function toSolrArray()
@@ -269,7 +270,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
     
     public function getSysno()
     {
-        return $this->getField('998');
+        return $this->sysno;
     }
     
     public function getAuthorAndTitle()
