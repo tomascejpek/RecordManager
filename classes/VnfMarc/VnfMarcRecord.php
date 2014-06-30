@@ -94,7 +94,14 @@ class VnfMarcRecord extends MarcRecord
         }
        
         $data['institutionAlbumsOnly'] = $this->getInstitution();
-         
+
+        if (isset($data['url']) && !empty($data['url'])) {
+            $data['externalLinks_str_mv'] = array();
+            for($i = 0; $i < count($data['url']); $i++) {
+                $data['externalLinks_str_mv'][$i] = $this->source . ';' . $data['url'][$i];
+            }
+        }
+
         return $data;
     }
 
