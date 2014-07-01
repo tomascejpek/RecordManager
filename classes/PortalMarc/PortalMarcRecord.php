@@ -480,4 +480,15 @@ class PortalMarcRecord extends MarcRecord
         return $statuses;
     }
 
+    public function parseXML($xml) {
+        //fixes occasional namespace bug
+        $content = strstr($xml, 'controlfield', true);
+        if($content) {
+            $content = rtrim($content);
+            if ($content[strlen($content) -1] == '<') {
+                $xml = preg_replace('/<record.*>/', '<record>', $xml);
+            }
+        }
+        return parent::parseXML($xml);
+    }
 }
