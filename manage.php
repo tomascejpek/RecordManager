@@ -117,6 +117,13 @@ EOT;
             case 'updatekeys':
                 $manager->updateDedupKeys($source);
                 break;
+            case 'dummyupdate':
+                $manager->dummyUpdate($source, 
+                                      isset($params['file']) ? $params['file'] : null, 
+                                      isset($params['max']) ? $params['max'] : 10, 
+                                      isset($params['id']) ? $params['id'] : null
+                    );
+                break;
             default: 
                 echo 'Unknown func: ' . $params['func'] . "\n"; 
                 exit(1);

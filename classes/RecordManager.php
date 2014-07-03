@@ -316,6 +316,7 @@ class RecordManager
                     }
 //                  $params['update_needed'] = false;
                 }
+
                 $records = $this->db->record->find($params);
                 $total = $this->counts ? $records->count() : 'the';
                 $count = 0;
@@ -2055,5 +2056,27 @@ class RecordManager
             }
         }
         $this->db->record->save($buffer);
+    }
+
+    /**
+     * outputs solr array of records into file
+     * @param $source source of records
+     * @param $file   filename for output
+     * @param $max    maximum number of records on output
+     * @param $id     id of specific record, only one record is on output if $id != null
+     * @return void
+     */
+    public function dummyUpdate($source, $file="out.txt", $max=10, $id=null)
+    {
+        $params = $id == null ? array('source_id' => $source) : array('_id' => $id);
+        $records = $this->db->record->find($params);
+        $records->immortal(true);
+        $count = 0;
+        $fout = fopen($file,'w');
+        foreach ($records as $record) {
+            $metadataRecord = RecordFactory::createRecord($record['format'], MetadataUtils::getRecordData($record, true), $record['oai_id'], $record['source_id']);
+            fwrite($fout , print_r($metadataRecord->toSolrArray(), true));
+            if (++$count >= $max) break;
+        }
     }
 }
