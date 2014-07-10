@@ -373,7 +373,7 @@ class MappablePortalMarcRecord extends MappableMarcRecord
                     $logger->log('MarcRecord', "Discarding invalid coordinates $longitude,$latitude decoded from w=$westOrig, e=$eastOrig, n=$northOrig, s=$southOrig, record {$this->source}." . $this->getID(), Logger::WARNING);
                 } else {
                     global $logger;
-                    if (!$north || !$south || !$east || !$west) {
+                    if (!$north || !$south || !$east || !$west || is_nan($north) || is_nan($south) || is_nan($east) || is_nan($north)) {
                         $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." missig coordinate w=$west e=$east n=$north s=$south", Logger::WARNING);
                     } else {
                         return $west . ' ' . $south . ' ' . $east . ' ' . $north;
