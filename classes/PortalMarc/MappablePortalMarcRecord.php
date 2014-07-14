@@ -376,7 +376,12 @@ class MappablePortalMarcRecord extends MappableMarcRecord
                     if (!$north || !$south || !$east || !$west || is_nan($north) || is_nan($south) || is_nan($east) || is_nan($north)) {
                         $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." missig coordinate w=$west e=$east n=$north s=$south", Logger::WARNING);
                     } else {
-                        return $west . ' ' . $south . ' ' . $east . ' ' . $north;
+                        if ($west < $east && $south < $north) {
+                            $result = $west . ' ' . $south . ' ' . $east . ' ' . $north;
+                            return $result;
+                        } else {
+                            $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." missig coordinate w=$west e=$east n=$north s=$south", Logger::WARNING);
+                        }
                     }
                 }
             }
