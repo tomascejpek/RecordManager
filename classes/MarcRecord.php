@@ -51,7 +51,7 @@ class MarcRecord extends BaseRecord
     const GET_NORMAL = 0;
     const GET_ALT = 1;
     const GET_BOTH = 2;
-    
+
     /** MARC is stored in a multidimensional array:
      *  [001] - "12345"
      *  [245] - i1: '0'
@@ -81,12 +81,12 @@ class MarcRecord extends BaseRecord
         if (isset ($dataSourceSettings[$source])) {
             $this->settings = $dataSourceSettings[$source];
         }
-        
+
         if (isset($this->settings) && isset($this->settings['inputEncoding'])
         && strtolower($this->settings['inputEncoding']) != 'utf-8' ) {
             $this->encoding = $this->settings['inputEncoding'];
         }
-        
+
         $firstChar = substr($data, 0, 1);
         if ($firstChar === '{') {
             $fields = json_decode($data, true);
@@ -130,7 +130,7 @@ class MarcRecord extends BaseRecord
                                     foreach ($field['s'] as $subfield) {
                                         $newField['s'][] = array($subfield['c'] => $subfield['v']);
                                     }
-                                } 
+                                }
                                 $this->fields[$code][] = $newField;
                             } else {
                                 $this->fields[$code][] = $field;
@@ -140,7 +140,7 @@ class MarcRecord extends BaseRecord
                 } else {
                     $this->fields = $fields['f'];
                 }
-            } 
+            }
         } elseif ($firstChar === '<') {
             $this->parseXML($data);
         } elseif (ctype_alpha($firstChar)) {
@@ -155,7 +155,7 @@ class MarcRecord extends BaseRecord
 
     /**
      * Serialize the record for storing in the database
-     * 
+     *
      * @return string
      */
     public function serialize()
@@ -180,7 +180,7 @@ class MarcRecord extends BaseRecord
             $leader = str_pad(substr($this->fields['000'], 0, 24), 24);
             $record->addChild('leader', $leader);
         }
-          
+
         foreach ($this->fields as $tag => $fields) {
             if ($tag == '000') {
                 continue;
@@ -223,7 +223,7 @@ class MarcRecord extends BaseRecord
     public function toSolrArray()
     {
         $data = parent::toSolrArray();
-          
+
         // building
         $data['building'] = array();
         foreach ($this->getFields('852') as $field) {
@@ -232,7 +232,7 @@ class MarcRecord extends BaseRecord
                 $data['building'][] = $location;
             }
         }
-          
+
         // long_lat
         $field = $this->getField('034');
         if ($field) {
@@ -253,14 +253,14 @@ class MarcRecord extends BaseRecord
                 global $logger;
                 $logger->log('MarcRecord', "INVALID RECORD ".$this->source . $this->getID()." decoded from w=$westOrig, e=$eastOrig, n=$northOrig, s=$southOrig, decoded as w=$west e=$east n=$north s=$south" , Logger::WARNING);
             }
-            
+
             if (!is_nan($west) && !is_nan($north)) {
                 if (!is_nan($east)) {
                     $longitude = ($west + $east) / 2;
                 } else {
                     $longitude = $west;
                 }
-                    
+
                 if (!is_nan($south)) {
                     $latitude = ($north + $south) / 2;
                 } else {
@@ -284,24 +284,24 @@ class MarcRecord extends BaseRecord
             $data['fullrecord'] = $this->toXML();
         }
         $data['allfields'] = $this->getAllFields();
-          
+
         // language
         $languages = $this->getLanguages();
-            
+
         foreach ($languages as $language) {
             if (preg_match('/^\w{3}$/', $language) && $language != 'zxx' && $language != 'und') {
                 $data['language'][] = $language;
             }
         }
-          
+
         $data['format'] = $this->getFormat();
-        
+
         $data['author'] = $this->getFieldSubfields('100', array('a', 'b', 'c', 'd', 'e'));
         $data['author_fuller'] = $this->getFieldSubfields('100', array('q'));
         $data['author-letter'] = $this->getFieldSubfields('100', array('a'));
 
         $data['author2'] = $this->getFullAuthor();
-        
+
         $key = array_search($data['author'], $data['author2']);
         if ($key !== false) {
             unset($data['author2'][$key]);
@@ -320,7 +320,7 @@ class MarcRecord extends BaseRecord
             ),
             true
         );
-          
+
         $data['title'] = $this->getTitle();
         $data['title_sub'] = $this->getFieldSubfields('245', array('b', 'n', 'p'));
         $data['title_short'] = $this->getFieldSubfields('245', array('a'));
@@ -338,7 +338,7 @@ class MarcRecord extends BaseRecord
                     )
                 )
             )
-        ); 
+        );
         $data['title_old'] = $this->getFieldsSubfields(
             array(
                 array(MarcRecord::GET_BOTH, '780', array('a', 's', 't'))
@@ -350,12 +350,12 @@ class MarcRecord extends BaseRecord
             )
         );
         $data['title_sort'] = $this->getTitle(true);
-        
+
         if (!$data['title_short']) {
             $data['title_short'] = $this->getFieldSubfields('240', array('a', 'n', 'p'));
             $data['title_full'] = $this->getFieldSubfields('240');
         }
-        
+
         $data['series'] = $this->getFieldsSubfields(
             array(
                 array(MarcRecord::GET_BOTH, '440', array('a')),
@@ -364,11 +364,11 @@ class MarcRecord extends BaseRecord
                 array(MarcRecord::GET_BOTH, '830', array('a', 'p'))
             )
         );
-          
+
         $data['publisher'] = $this->getFieldsSubfields(
             array(
                 array(MarcRecord::GET_BOTH, '260', array('b'))
-            ), 
+            ),
             false, true
         );
         if (!$data['publisher']) {
@@ -433,8 +433,8 @@ class MarcRecord extends BaseRecord
 
         $data['callnumber'] = strtoupper(
             str_replace(
-                ' ', 
-                '', 
+                ' ',
+                '',
                 $this->getFirstFieldSubfields(
                     array(
                         array(MarcRecord::GET_NORMAL, '080', array('a', 'b')),
@@ -543,7 +543,7 @@ class MarcRecord extends BaseRecord
         $data['illustrated'] = $this->getIllustrated();
 
         // TODO: dewey fields and OCLC numbers
-          
+
         return $data;
     }
 
@@ -604,7 +604,7 @@ class MarcRecord extends BaseRecord
         // We could look at the bibliographic level, but we need 773 to do anything useful anyway..
         return isset($this->fields['773']);
     }
-    
+
     /**
      * Return host record ID for component part
      *
@@ -635,7 +635,7 @@ class MarcRecord extends BaseRecord
         if (!$field773g) {
             return '';
         }
-        
+
         // Try to parse the data from different versions of 773g
         $matches = array();
         if (preg_match('/(\d*)\s*\((\d{4})\)\s*:\s*(\d*)/', $field773g, $matches)) {
@@ -643,7 +643,7 @@ class MarcRecord extends BaseRecord
         }
         return '';
     }
-    
+
     /**
      * Component parts: get the issue that contains this component part
      *
@@ -655,7 +655,7 @@ class MarcRecord extends BaseRecord
         if (!$field773g) {
             return '';
         }
-        
+
         // Try to parse the data from different versions of 773g
         $matches = array();
         if (preg_match('/(\d*)\s*\((\d{4})\)\s*:\s*(\d*)/', $field773g, $matches)) {
@@ -666,7 +666,7 @@ class MarcRecord extends BaseRecord
         }
         return '';
     }
-    
+
     /**
      * Component parts: get the start page of this component part in the host record
      *
@@ -678,7 +678,7 @@ class MarcRecord extends BaseRecord
         if (!$field773g) {
             return '';
         }
-        
+
         // Try to parse the data from different versions of 773g
         $matches = array();
         if (preg_match('/,\s*\w\.?\s*([\d,\-]+)/', $field773g, $matches) || preg_match('/^\w\.?\s*([\d,\-]+)/', $field773g, $matches)) {
@@ -687,7 +687,7 @@ class MarcRecord extends BaseRecord
         }
         return '';
     }
-    
+
     /**
      * Component parts: get the container title
      *
@@ -707,13 +707,13 @@ class MarcRecord extends BaseRecord
     {
         return $this->getFieldSubfields('773', array('g'));
     }
-    
+
     /**
      * Dedup: Return record title
      *
-     * @param bool $forFiling Whether the title is to be used in filing 
+     * @param bool $forFiling Whether the title is to be used in filing
      *                        (e.g. sorting, non-filing characters should be removed)
-     *                        
+     *
      * @return string
      * @access public
      */
@@ -806,7 +806,7 @@ class MarcRecord extends BaseRecord
         $arr = array();
         $nbn = $this->getField('015');
         if ($nbn) {
-            $nr = MetadataUtils::normalize(strtok(MetadataUtils:: $this->getSubfield($nbn, 'a'), ' '));
+            $nr = MetadataUtils::normalize(strtok($this->getSubfield($nbn, 'a'), ' '));
             $src = $this->getSubfield($nbn, '2');
             if ($src && $nr) {
                 $arr[] = "($src)$nr";
@@ -851,7 +851,7 @@ class MarcRecord extends BaseRecord
         }
         return $arr;
     }
-    
+
     /**
      * Dedup: Return (unique) ISBNs in ISBN-13 format without dashes
      *
@@ -897,10 +897,10 @@ class MarcRecord extends BaseRecord
                 $arr[] = $issn;
             }
         }
-    
+
         return $arr;
     }
-    
+
     /**
      * Dedup: Return series ISSN
      *
@@ -1130,21 +1130,21 @@ class MarcRecord extends BaseRecord
                 return $online ? 'eSerial' : 'Serial';
             }
             break;
-            
+
         case 'A':
             // Component part in monograph
             return $online ? 'eBookSection' : 'BookSection';
         case 'B':
-            // Component part in serial 
+            // Component part in serial
             return $online ? 'eArticle' : 'Article';
         case 'C':
             // Collection
             return 'Collection';
         case 'D':
-            // Component part in collection (sub unit) 
+            // Component part in collection (sub unit)
             return 'SubUnit';
         case 'I':
-            // Integrating resource 
+            // Integrating resource
             return 'ContinuouslyUpdatedResource';
         }
         return 'Other';
@@ -1210,7 +1210,7 @@ class MarcRecord extends BaseRecord
      * Used when exporting records to a file.
      *
      * @param string $dedupKey Dedup key to be added
-     * 
+     *
      * @return void
      * @access public
      */
@@ -1223,7 +1223,7 @@ class MarcRecord extends BaseRecord
                 's' => array(
                     array(
                         'a' => $dedupKey
-                    )    
+                    )
                 )
             );
         } else {
@@ -1233,9 +1233,9 @@ class MarcRecord extends BaseRecord
 
     /**
      * Parse MARCXML
-     * 
+     *
      * @param string $marc MARCXML
-     * 
+     *
      * @throws Exception
      * @return void
      */
@@ -1264,7 +1264,7 @@ class MarcRecord extends BaseRecord
        } else {
            $this->fields['000'] = '';
        }
-       
+
        $query = $document->xpath($namespace.'controlfield');
        foreach ($query as $field) {
            $this->fields[(string)$field['tag']][] = (string)$field[0];
@@ -1290,9 +1290,9 @@ class MarcRecord extends BaseRecord
 
     /**
      * Parse ISO2709 exchange format
-     * 
+     *
      * @param unknown_type $marc ISO2709 string
-     * 
+     *
      * @throws Exception
      * @return void
      */
@@ -1300,13 +1300,13 @@ class MarcRecord extends BaseRecord
     {
         //EXPERIMENTAL remove CR LF
         $marc = trim($marc,"\n\r");
-        
+
         $this->fields['000'] = substr($marc, 0, 24);
         $dataStart = 0 + substr($marc, 12, 5);
         $dirLen = $dataStart - MARCRecord::LEADER_LEN - 1;
-        
- 
-        
+
+
+
         $offset = 0;
         while ($offset < $dirLen) {
             $tag = substr($marc, MARCRecord::LEADER_LEN + $offset, 3);
@@ -1314,19 +1314,19 @@ class MarcRecord extends BaseRecord
             $dataOffset = substr($marc, MARCRecord::LEADER_LEN + $offset + 7, 5);
 
             $tagData = substr($marc, $dataStart + $dataOffset, $len);
-            
+
             if (substr($tagData, -1, 1) == MARCRecord::END_OF_FIELD) {
                 $tagData = substr($tagData, 0, -1);
                 $len--;
             } else {
                 throw new Exception("Invalid MARC record (end of field not found): $marc");
             }
-            
+
             if (strstr($tagData, MARCRecord::SUBFIELD_INDICATOR)) {
                 $newField = array(
                     'i1' => $tagData[0],
                     'i2' => $tagData[1]
-                );                
+                );
                 $subfields = explode(MARCRecord::SUBFIELD_INDICATOR, substr($tagData, 3));
             foreach ($subfields as $subfield) {
                 $str = substr($subfield, 1);
@@ -1335,8 +1335,8 @@ class MarcRecord extends BaseRecord
                         if ($str === false) {
                             $str = substr($subfield,1);
                         }
-                    }    
-                    if (!empty($subfield)) { 
+                    }
+                    if (!empty($subfield)) {
                         $newField['s'][] = array($subfield[0] => $str);
                     }
                 }
@@ -1344,20 +1344,20 @@ class MarcRecord extends BaseRecord
             } else {
                 $this->fields[$tag][] = $tagData;
             }
-            
+
             $offset += 12;
         }
     }
 
     /**
-     * Convert to ISO2709. Return empty string if record too long. 
-     * 
+     * Convert to ISO2709. Return empty string if record too long.
+     *
      * @return string
      */
     public function toISO2709()
     {
         global $configArray;
-        
+
         $leader = str_pad(substr($this->fields['000'], 0, 24), 24);
 
         $directory = '';
@@ -1412,7 +1412,7 @@ class MarcRecord extends BaseRecord
             . substr($leader, 17);
         return $leader . $directory . $data;
     }
-    
+
     public function toLineMarc()
     {
     	$result = "";
@@ -1447,47 +1447,47 @@ class MarcRecord extends BaseRecord
     	}
     	return $result;
     }
-    
-    
+
+
     /**
      * parses Line marc-formated record
      * @param string $marc
      */
-    protected function parseLineMarc($marc) 
+    protected function parseLineMarc($marc)
     {
         $lines = explode("\n", $marc);
         $finalField = array();
-        
+
         foreach ($lines as $line) {
             $line = trim($line,"\n\r");
 
             if (empty($line)) {
             	continue;
             }
-            
+
             $field = substr($line, 0, 3);
             $line = substr($line, 3, strlen($line));
-        
+
             if ($field == 'LDR') {
                 $finalField['000'] = array($line);
                 continue;
             }
-        
+
             $arrayField = array();
             //handle control fields
             if (strpos($field, '00') === 0) {
                 $finalField[$field] = array(trim($this->encodeString($line)));
                 continue;
             }
-        
+
             $arrayField['i1'] = $line[0] == '#' ? '' : $line[0];
             $arrayField['i2'] = $line[1] == '#' ? '' : $line[1];
             $line = substr($line, 2);
-            
+
             $subfield = null;
             $currentString = "";
             $arrayField['s'] = array();
-        
+
             for ($i = 0; $i < strlen($line);) {
                 if ($line[$i] == '$' && ctype_alnum($line[$i+1])) {
                     if ($subfield != null) {
@@ -1503,14 +1503,14 @@ class MarcRecord extends BaseRecord
             }
             $arrayField['s'][] = array($subfield => $this->encodeString($currentString));
             $finalField[$field][] = $arrayField;
-        
+
         }
         $this->fields = $finalField;
     }
 
     /**
      * Check if the work is illustrated
-     * 
+     *
      * @return boolean
      */
     protected function getIllustrated()
@@ -1552,9 +1552,9 @@ class MarcRecord extends BaseRecord
 
     /**
      * Get first matching field
-     * 
+     *
      * @param string $field Tag to get
-     * 
+     *
      * @return string
      */
     protected function getField($field)
@@ -1571,9 +1571,9 @@ class MarcRecord extends BaseRecord
 
     /**
      * Get all matching fields
-     * 
+     *
      * @param string $field Tag to get
-     * 
+     *
      * @return mixed[]
      */
     protected function getFields($field)
@@ -1586,10 +1586,10 @@ class MarcRecord extends BaseRecord
 
     /**
      * Get indicator value
-     * 
+     *
      * @param array $field     MARC field
      * @param int   $indicator Indicator nr, 1 or 2
-     * 
+     *
      * @return string
      */
     protected function getIndicator($field, $indicator)
@@ -1603,10 +1603,10 @@ class MarcRecord extends BaseRecord
 
     /**
      * Get a single subfield from the given field
-     * 
+     *
      * @param array  $field Field
      * @param string $code  Subfield code
-     * 
+     *
      * @return string Subfield
      */
     protected function getSubfield($field, $code)
@@ -1624,11 +1624,11 @@ class MarcRecord extends BaseRecord
 
     /**
      * Get specified subfields
-     * 
+     *
      * @param array  $field MARC Field
      * @param string $codes Subfield codes
-     * 
-     * @return string[] Subfields 
+     *
+     * @return string[] Subfields
      */
     protected function getSubfieldsArray($field, $codes)
     {
@@ -1647,13 +1647,13 @@ class MarcRecord extends BaseRecord
         }
         return $data;
     }
-    
+
     /**
      * Get specified subfields
-     * 
+     *
      * @param array  $field MARC Field
      * @param string $codes Subfield codes
-     * 
+     *
      * @return string Concatenated subfields (space-separated)
      */
     protected function getSubfields($field, $codes)
@@ -1664,11 +1664,11 @@ class MarcRecord extends BaseRecord
 
     /**
      * Get field data
-     *  
+     *
      * @param string  $tag                      Field to get
      * @param array   $codes                    Optional array of accepted subfields
      * @param boolean $stripTrailingPunctuation Whether to strip trailing punctuation from the results
-     * 
+     *
      * @return string Concatenated subfields (space-separated)
      */
     protected function getFieldSubfields($tag, $codes = null, $stripTrailingPunctuation = true)
@@ -1699,16 +1699,16 @@ class MarcRecord extends BaseRecord
 
     /**
      * Return an array of fields according to the fieldspecs.
-     * 
+     *
      * Format of fieldspecs: [+*][fieldcode][subfields]:...
      *              + = return only alternate script fields (880 equivalents)
      *              * = return normal and alternate script fields
-     * 
+     *
      * @param array   $fieldspecs               Fields to get
      * @param boolean $firstOnly                Return only first matching field
      * @param boolean $stripTrailingPunctuation Whether to strip trailing punctuation from the results
      * @param boolean $splitSubfields           Whether to split subfields to separate array items
-     * 
+     *
      * @return string[] Subfields
      */
     protected function getFieldsSubfields($fieldspecs, $firstOnly = false, $stripTrailingPunctuation = true, $splitSubfields = false)
@@ -1739,7 +1739,7 @@ class MarcRecord extends BaseRecord
                                 if (in_array($code, $codes)) {
                                     $data[] = current($subfield);
                                 }
-                            }                            
+                            }
                         } else {
                             $fieldContents = '';
                             foreach ($field['s'] as $subfield) {
@@ -1765,7 +1765,7 @@ class MarcRecord extends BaseRecord
                                 $fieldContents .= ' ';
                             }
                             $fieldContents .= current($subfield);
-                        }                        
+                        }
                         if ($fieldContents) {
                             $data[] = $fieldContents;
                         }
@@ -1788,9 +1788,9 @@ class MarcRecord extends BaseRecord
                                     if (in_array($code, $codes)) {
                                         $data[] = current($subfield);
                                     }
-                                }                            
+                                }
                             } else {
-                                $fieldContents = '';                                
+                                $fieldContents = '';
                                 foreach ($field['s'] as $subfield) {
                                     $code = key($subfield);
                                     if ($code === 0) {
@@ -1814,7 +1814,7 @@ class MarcRecord extends BaseRecord
                                     $fieldContents .= ' ';
                                 }
                                 $fieldContents .= current($subfield);
-                            }                        
+                            }
                             if ($fieldContents) {
                                 $data[] = $fieldContents;
                             }
@@ -1836,9 +1836,9 @@ class MarcRecord extends BaseRecord
 
     /**
      * Get all subfields of specified fields
-     * 
+     *
      * @param string $tag Field tag
-     * 
+     *
      * @return string[]
      */
     protected function getFieldsAllSubfields($tag)
@@ -1855,13 +1855,13 @@ class MarcRecord extends BaseRecord
 
     /**
      * Get subfields for the first found field according to the fieldspecs
-     * 
+     *
      * Format of fieldspecs: [+*][fieldcode][subfields]:...
      *              + = return only alternate script fields (880 equivalents)
      *              * = return normal and alternate script fields
-     * 
+     *
      * @param array $fieldspecs Field specifications
-     * 
+     *
      * @return string Concatenated subfields (space-separated)
      */
     protected function getFirstFieldSubfields($fieldspecs)
@@ -1875,10 +1875,10 @@ class MarcRecord extends BaseRecord
 
     /**
      * Get all subfields of the given field
-     * 
+     *
      * @param array $field  Field
      * @param array $filter Optional filter to exclude subfield
-     * 
+     *
      * @return string[] All subfields
      */
     protected function getAllSubfields($field, $filter = null)
@@ -1886,7 +1886,7 @@ class MarcRecord extends BaseRecord
         if (!$field || !isset($field['s'])) {
             return '';
         }
-        
+
         $subfields = array();
         foreach ($field['s'] as $subfield) {
             if (isset($filter) && in_array(key($subfield), $filter)) {
@@ -1899,29 +1899,29 @@ class MarcRecord extends BaseRecord
 
     /**
      * Set field to given value
-     * 
+     *
      * @param string $field Field tag
      * @param array  $value Field data
-     * 
+     *
      * @return void
      */
     protected function setField($field, $value)
     {
         $this->fields[$field] = $value;
     }
-    
+
     /**
      * Get an array of all fields relevant to allfields search
-     * 
+     *
      * @return string[]
      */
     protected function getAllFields()
     {
         $allFields = array();
         $subfieldFilter = array(
-            '650' => array('2', '6', '8'), 
-            '773' => array('6', '7', '8', 'w'), 
-            '856' => array('6', '8', 'q') 
+            '650' => array('2', '6', '8'),
+            '773' => array('6', '7', '8', 'w'),
+            '856' => array('6', '8', 'q')
         );
         $allFields = array();
         foreach ($this->fields as $tag => $fields) {
@@ -1947,24 +1947,24 @@ class MarcRecord extends BaseRecord
         );
         return array_values(array_unique($allFields));
     }
-    
+
     protected function encodeString($str) {
-        
+
         if (isset($this->encoding)) {
             $encoded = iconv($this->encoding,"utf-8",$str);
             return $encoded != false ? $encoded : $str;
         }
-        
+
         return $str;
     }
-    
+
     public function getHierarchyField() {
         return '';
     }
-    
+
     public function addHierarchyLink($type, $target) {
         return;
     }
-    
+
 }
 
