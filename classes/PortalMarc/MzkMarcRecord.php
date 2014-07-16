@@ -55,7 +55,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         }
         return null;
     }
-    
+
     /**
      * Return record ID (local)
      *
@@ -96,7 +96,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         }
         return $statuses;
     }
-    
+
     /**
      * Dedup: Return format from predefined values
      *
@@ -234,7 +234,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         }
         return 'visible';
     }
-    
+
     public function getAcquisitionDate()
     {
         $mzkAcqDate = $this->getFieldSubfields('991', array('b'));
@@ -250,7 +250,7 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         }
         return null;
     }
-    
+
     public function getBases()
     {
         static $allowedBases = array(
@@ -265,14 +265,26 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         if ($secBase != null && in_array($secBase, $allowedBases[$base])) {
             $bases[] = $firstBase . '_' . $secBase;
         }
+        // info USA
+        $f996 = $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '996', array('l')),
+            )
+        );
+        foreach ($f996 as $value) {
+            if ($value == 'USA') {
+                $bases[] = $firstBase . '_infoUSA';
+                break;
+            }
+        }
         return $bases;
     }
-    
+
     public function getSysno()
     {
         return $this->sysno;
     }
-    
+
     public function getAuthorAndTitle()
     {
         $author = $this->getFieldSubfields('100', array('a', 'd'));
@@ -281,9 +293,9 @@ class MzkMarcRecord extends MappablePortalMarcRecord
             return $author . ": " . $title;
         }
         return null;
-        
+
     }
-    
+
     public function getRelevancy()
     {
         $relevancy = "default";
