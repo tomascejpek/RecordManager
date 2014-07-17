@@ -15,13 +15,13 @@ require_once 'MzkMarcRecord.php';
  */
 class MzkNormsMarcRecord extends MzkMarcRecord
 {
-    
+
     /**
      * Record id
-     * 
+     *
      */
     protected $id;
-    
+
     /**
      * Constructor
      *
@@ -36,7 +36,7 @@ class MzkNormsMarcRecord extends MzkMarcRecord
         list($base, $sysno) = explode('-', $ident);
         $this->id = $sysno;
     }
-    
+
     /**
      * Return record ID (local)
      *
@@ -46,10 +46,15 @@ class MzkNormsMarcRecord extends MzkMarcRecord
     {
         return $this->id;
     }
-    
+
     public function getLinkingID()
     {
         return $this->id;
     }
-    
+
+    public function getFormat()
+    {
+        return 'Norm';
+    }
+
 }
