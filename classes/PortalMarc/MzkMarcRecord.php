@@ -97,6 +97,24 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         return $statuses;
     }
 
+    public function getTopicFacets()
+    {
+        print "called<BR>";
+        return $this->getAllSubfieldsWithIndicator(
+                array(
+                    array('600',  null,  null,  array('x')),
+                    array('610',  null,  null,  array('x')),
+                    array('611',  null,  null,  array('x')),
+                    array('630',  null,  null,  array('x')),
+                    array('648',  null,  null,  array('x')),
+                    array('650',  null,  '7',   array('a')),
+                    array('650',  null,  '7',   array('x')),
+                    array('651',  null,  null,  array('x')),
+                    array('655',  null,  null,  array('x')),
+                )
+        );
+    }
+
     /**
      * Dedup: Return format from predefined values
      *
