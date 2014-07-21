@@ -34,7 +34,7 @@ class KjmMarcRecord extends PortalMarcRecord
         return $data;
     }
 
-    protected function parseXML($xml)
+    public function parseXML($xml)
     {
        $document = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOENT);
        if ($document === false) {
@@ -69,5 +69,64 @@ class KjmMarcRecord extends PortalMarcRecord
            }
        }
     }
+   
+    public function toISO2709()
+    {
+        global $configArray;
 
+        $leader = str_pad(substr($this->fields['000'], 0, 24), 24);
+
+        $directory = '';
+        $data = '';
+        $datapos = 0;
+        foreach ($this->fields as $tag => $fields) {
+            if ($tag == '000') {
+                continue;
+            }
+            if (strlen($tag) != 3) {
+                error_log("Invalid field tag: '$tag', id " . $this->getField('001'));
+                continue;
+            }
+            if (!is_array($fields)) $fields = array($fields);
+            foreach ($fields as $field) {
+                $fieldStr = '';
+                if (is_array($field)) {
+                    $fieldStr = $field['i1'] . $field['i2'];
+                    if (isset($field['s']) && is_array($field['s'])) {
+                        foreach ($field['s'] as $subfield) {
+                            $subfieldCode = key($subfield);
+                            $fieldStr .= MARCRecord::SUBFIELD_INDICATOR . $subfieldCode . current($subfield);
+                        }
+                    }
+                } else {
+                    // Additional normalization here so that we don't break ISO2709 directory in SolrUpdater
+                    $fieldStr = MetadataUtils::normalizeUnicode($field);
+                }
+                $fieldStr .= MARCRecord::END_OF_FIELD;
+                $len = strlen($fieldStr);
+                if ($len > 9999) {
+                    return '';
+                }
+                if ($datapos > 99999) {
+                    return '';
+                }
+                $directory .= $tag . str_pad($len, 4, '0', STR_PAD_LEFT) . str_pad($datapos, 5, '0', STR_PAD_LEFT);
+                $datapos += $len;
+                $data .= $fieldStr;
+            }
+        }
+        $directory .= MARCRecord::END_OF_FIELD;
+        $data .= MARCRecord::END_OF_RECORD;
+        $dataStart = strlen($leader) + strlen($directory);
+        $recordLen = $dataStart + strlen($data);
+        if ($recordLen > 99999) {
+            return '';
+        }
+
+        $leader = str_pad($recordLen, 5, '0', STR_PAD_LEFT)
+            . substr($leader, 5, 7)
+            . str_pad($dataStart, 5, '0', STR_PAD_LEFT)
+            . substr($leader, 17);
+        return $leader . $directory . $data;
+    }
 }
