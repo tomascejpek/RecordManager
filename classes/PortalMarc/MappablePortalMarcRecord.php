@@ -50,7 +50,7 @@ class MappablePortalMarcRecord extends MappableMarcRecord
     
     /**
      * Get title for sorting
-     * 
+     *
      * @return NULL|string
      */
     public function getSortableTitle()
@@ -279,7 +279,9 @@ class MappablePortalMarcRecord extends MappableMarcRecord
                                 $data[] = current($subfield);
                             }
                         }
-                        $result[] = implode(' ', $data);
+                        if (!empty($data)) {
+                            $result[] = implode(' ', $data);
+                        }
                     }
                 }
             }

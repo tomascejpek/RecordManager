@@ -99,7 +99,6 @@ class MzkMarcRecord extends MappablePortalMarcRecord
 
     public function getTopicFacets()
     {
-        print "called<BR>";
         return $this->getAllSubfieldsWithIndicator(
                 array(
                     array('600',  null,  null,  array('x')),
