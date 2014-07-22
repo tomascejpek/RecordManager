@@ -34,6 +34,50 @@ class KjmMarcRecord extends PortalMarcRecord
         return $data;
     }
 
+    public function getHierarchicalInstitutions($field, $subfield) 
+    {
+        $institution = $this->getInstitution();
+        $depth = 0;
+        $instArray = array();
+        $instArray[] = $depth++ . '/' .$institution;
+
+        $fld = $this->getFields('993');
+        foreach ($fld as $current) {
+            $subfld = $this->getSubfield($current, 'l');
+            if (!preg_match('/.*\$~.*/', $subfld)) {
+                continue;
+            }
+            $subfld = preg_split('/\$~/', $subfld);
+            $id = $subfld[0];
+
+            if (!$id) {
+                global $logger;
+                $logger->log('getHierarchicalInstitutions', 'Field ' .  $field . $subfield . ' empty for record ' . $this->getID(), LOGGER::WARNING ) ;
+                $id = 0;
+            }
+
+            if (preg_match('/02.*/', $id)) {
+                $id = '02';
+            } elseif (preg_match('/0.*/', $id)) {
+                $id = '0';
+            } elseif (preg_match('/16.*/', $id)) {
+                $id = '16';
+            } elseif (preg_match('/30.*/', $id)) {
+                $id = '30';
+            } elseif (preg_match('/40.*/', $id)) {
+                $id = '40';
+            }
+
+            if ($this->settings['institution_hierarchy']) {
+                $instMapping = parse_ini_file($this->settings['institution_hierarchy']);
+                if (isset($instMapping[$id])) {
+                    $instArray[] = $depth . '/' . $institution . '/' . $instMapping[$id];
+                }
+            }
+        }
+        return $instArray;
+
+    }
     public function parseXML($xml)
     {
        $document = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOENT);
