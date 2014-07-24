@@ -371,7 +371,16 @@ class HarvestOaiPmh
                     continue;
                 }
             }
-            break;
+            if (!$response || !$response->getBody()) {
+                $this->message(
+                    "Request '$urlStr' failed ($code), was EMPTY, retrying in 60 seconds...",
+                    false,
+                    Logger::WARNING
+                );
+                sleep(60);
+            } else {
+                break;
+            }
         }
         $code = $response->getStatus();
         if ($code >= 300) {
