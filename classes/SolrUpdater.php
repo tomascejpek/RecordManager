@@ -867,9 +867,12 @@ class SolrUpdater
                 $hiddenComponent = true;
             } elseif ($settings['componentParts'] == 'merge_non_articles' || $settings['componentParts'] == 'merge_non_earticles') {
                 $format = $metadataRecord->getFormat();
-                if (!in_array($format, $this->allArticleFormats)) {
+                if (!is_array($format)) {
+                	$format = array($format);
+                }
+                if (!array_uintersect($format, $this->allArticleFormats, "strcasecmp")) {
                     $hiddenComponent = true;
-                } elseif (in_array($format, $this->articleFormats)) {
+                } elseif (array_uintersect($format, $this->articleFormats, "strcasecmp")) {
                     $hiddenComponent = true;
                 }
             }
@@ -889,12 +892,15 @@ class SolrUpdater
                 $components = $this->db->record->find(array('source_id' => $record['source_id'], 'host_record_id' => $record['linking_id'], 'deleted' => false));
                 $hasComponentParts = $components->hasNext();
                 $format = $metadataRecord->getFormat();
+                if (!is_array($format)) {
+                	$format = array($format);
+                }
                 $merge = false;
                 if ($settings['componentParts'] == 'merge_all') {
                     $merge = true;
-                } elseif (!in_array($format, $this->allJournalFormats)) {
+                } elseif (!array_uintersect($format, $this->allJournalFormats, "strcasecmp")) {
                     $merge = true;
-                } elseif (in_array($format, $this->journalFormats) && $settings['componentParts'] == 'merge_non_earticles') {
+                } elseif (array_uintersect($format, $this->journalFormats, "strcasecmp") && $settings['componentParts'] == 'merge_non_earticles') {
                     $merge = true;
                 }
                 if (!$merge) {
