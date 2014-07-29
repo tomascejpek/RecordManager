@@ -1511,7 +1511,7 @@ class RecordManager
         
         $origFormat = is_array($origFormat) ? $origFormat : array($origFormat);
         $cFormat = is_array($cFormat) ? $origFormat : array($cFormat);
-        if (empty(array_uintersect($origFormat, $cFormat, 'strcasecmp')) && $this->solrUpdater->mapFormat($record['source_id'], $origFormat) != $this->solrUpdater->mapFormat($candidate['source_id'], $cFormat)) {
+        if (!array_uintersect($origFormat, $cFormat, 'strcasecmp') && $this->solrUpdater->mapFormat($record['source_id'], $origFormat) != $this->solrUpdater->mapFormat($candidate['source_id'], $cFormat)) {
             if ($this->verbose) {
                 echo "--Format mismatch: " . print_r($origFormat) . "!=" . print_r($cFormat) . "\n";
             }
