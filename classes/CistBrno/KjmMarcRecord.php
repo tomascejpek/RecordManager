@@ -1,6 +1,6 @@
 <?php
 
-require_once 'PortalMarcRecord.php';
+require_once 'CistBrnoMarcRecord.php';
 /**
  * MarcRecord Class - local customization for cistbrno
  *
@@ -12,7 +12,7 @@ require_once 'PortalMarcRecord.php';
  * @license  http://opensource.org/licenses/gpl-2.0.php GNU General Public License
  * @link     https://github.com/moravianlibrary/RecordManager
  */
-class KjmMarcRecord extends PortalMarcRecord
+class KjmMarcRecord extends CistBrnoMarcRecord
 {
     /**
      * Constructor
@@ -32,6 +32,25 @@ class KjmMarcRecord extends PortalMarcRecord
         
         $data['institution'] = $this->getHierarchicalInstitutions('993', 'l');
         return $data;
+    }
+    
+    public function getFormat() {
+    	$prefix = substr($this->getID(), 0, 2);
+    	if (strcasecmp($prefix, 'CD') ===  0) {
+    		$field = $this->getField('245');
+    		if ($field && ($subfield = $this->getSubfield($field, 'h'))) {
+    			switch ($subfield) {
+    				case 'videozáznam' : return 'kjm_video';
+    				case 'elektronický zdroj': return 'kjm_electronic_resources';
+    				case 'zvukový' : return 'kjm_audio';
+    			}
+    		}
+    	}
+    	return $this->unifyFormats(array($prefix));
+    }
+    
+    public function checkRecord() {
+    	return substr($this->getID(), 0, 2) === 'VS' ? false : true;
     }
 
     public function getHierarchicalInstitutions($field, $subfield) 
@@ -78,6 +97,7 @@ class KjmMarcRecord extends PortalMarcRecord
         return $instArray;
 
     }
+    
     public function parseXML($xml)
     {
        $document = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NOENT);

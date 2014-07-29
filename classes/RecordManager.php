@@ -139,6 +139,11 @@ class RecordManager
         // Read the artices file
         MetadataUtils::$articles = isset($configArray['Site']['articles']) 
             ? $this->readListFile($configArray['Site']['articles']) : array();
+            
+        // Read settings for CistBrno
+        if ($configArray['CistBrno'] && $configArray['CistBrno']['format_unification']) {
+        	$configArray['CistBrno']['format_unification_array'] = parse_ini_file($configArray['CistBrno']['format_unification']);
+        } 
     }
 
     /**
@@ -1503,9 +1508,12 @@ class RecordManager
         
         $origFormat = $origRecord->getFormat();
         $cFormat = $cRecord->getFormat();
-        if ($origFormat != $cFormat && $this->solrUpdater->mapFormat($record['source_id'], $origFormat) != $this->solrUpdater->mapFormat($candidate['source_id'], $cFormat)) {
+        
+        $origFormat = is_array($origFormat) ? $origFormat : array($origFormat);
+        $cFormat = is_array($cFormat) ? $origFormat : array($cFormat);
+        if (!array_uintersect($origFormat, $cFormat, 'strcasecmp') && $this->solrUpdater->mapFormat($record['source_id'], $origFormat) != $this->solrUpdater->mapFormat($candidate['source_id'], $cFormat)) {
             if ($this->verbose) {
-                echo "--Format mismatch: $origFormat != $cFormat\n";
+                echo "--Format mismatch: " . print_r($origFormat) . "!=" . print_r($cFormat) . "\n";
             }
             return false;
         }
