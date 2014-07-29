@@ -170,10 +170,9 @@ class MarcRecord extends BaseRecord
      */
     public function toXML()
     {
-        $xml = simplexml_load_string(
-            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\n<collection><record></record></collection>"
+        $record = simplexml_load_string(
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\n<record></record>"
         );
-        $record = $xml->record[0];
 
         if (isset($this->fields['000'])) {
             // Voyager is often missing the last '0' of the leader...
