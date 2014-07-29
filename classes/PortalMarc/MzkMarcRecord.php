@@ -227,6 +227,14 @@ class MzkMarcRecord extends MappablePortalMarcRecord
         return $locations;
     }
 
+    public function getCallNumbers()
+    {
+        $callnumbers = $this->getFieldSubfields('910', array('b'));
+        print "OK\n";
+        print_r($callnumbers);
+        return explode(' ', $callnumbers);
+    }
+
     public function getVisible()
     {
         // MZK field is remapped to 991 in OAI
