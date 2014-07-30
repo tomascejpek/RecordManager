@@ -301,8 +301,8 @@ class PortalsCommonMarcRecord extends MarcRecord
     	
     	//field 008
     	$field = $this->getField('008');
-    	if ($field && strlen($field) >= 23) {
-    		switch ($field[22]) {
+    	if ($field && strlen($field) >= 24) {
+    		switch ($field[23]) {
     			case 'a' :
     		        $formats[] = 'microformsA_008';
     		        break;
