@@ -48,7 +48,7 @@ class MzkCistBrnoMarcRecord extends CistBrnoMarcRecord
     
     public function getID()
     {
-        return $this->id;
+        return parent::getID();
     }
 }
 

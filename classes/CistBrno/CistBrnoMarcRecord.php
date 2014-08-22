@@ -87,6 +87,28 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
          
         $data['topic'] = $this->getKeywords();
 
+        //holdings information
+        $holdingsArray = array();
+        foreach (array('993', '996') as $fieldNo) {
+             foreach ($this->getFields($fieldNo) as $field) {
+                 $result = '';
+                 foreach ($field['s'] as $subfield) {
+                     foreach ($subfield as $code => $value) {
+                         $result .= '$' . $code . $value;
+                     }
+                 }
+                 $result .= '$@'.$this->getInstitution();
+                 if (!empty($result)) {
+                     if (!array_key_exists($fieldNo, $holdingsArray)) {
+                         $holdingsArray[$fieldNo] = array();
+                     }
+                     $holdingsArray[$fieldNo][] = $result;
+                 }
+            }
+        }
+        foreach ($holdingsArray as $fieldNo => $holdings) {
+            $data['holdings'. $fieldNo . '_str_mv'] = $holdings;
+        }
         return $data;
     }
     

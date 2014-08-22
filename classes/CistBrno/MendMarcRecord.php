@@ -15,7 +15,7 @@ require_once 'CistBrnoMarcRecord.php';
  */
 class MendMarcRecord extends CistBrnoMarcRecord
 {
-
+    
     /**
      * Constructor
      *
@@ -32,10 +32,42 @@ class MendMarcRecord extends CistBrnoMarcRecord
         parent::__construct($data, $oaiID, $source);
         // check for nesscesary format mapping
         global $configArray;
-        if (! $configArray['CistBrno'] ||
-                 ! $configArray['CistBrno']['format_unification_array']) {
+        if (!$configArray['CistBrno'] ||
+                 !$configArray['CistBrno']['format_unification_array']) {
             throw new Exception(
                     "Missing format unification mapping (settings->CistBrno->format_unification)");
+        }
+        
+        $iniContent = false;
+        //check subfield mapping
+        if (!$this->settings['status_map'] || !is_array($this->settings['status_map'])) {
+            global $dataSourceSettings;
+            global $basePath;
+            if ($dataSourceSettings[$source]['status_map']) {
+                 $iniContent = parse_ini_file($basePath . '/mappings/' . $dataSourceSettings[$source]['status_map']);
+                 if (is_array($iniContent)) {
+                     $dataSourceSettings[$source]['status_map'] = $iniContent;
+                 }
+            }
+            if (!is_array($dataSourceSettings[$source]['status_map'])) {
+                throw new Exception('Portal_mend - missing statuses mapping for holdings');
+            }
+            $this->settings = $dataSourceSettings[$source];
+        }
+        
+        if (!$this->settings['location_map'] || !is_array($this->settings['location_map'])) {
+            global $dataSourceSettings;
+            global $basePath;
+            if ($dataSourceSettings[$source]['location_map']) {
+                 $iniContent = parse_ini_file($basePath . '/mappings/' . $dataSourceSettings[$source]['location_map']);
+                 if (is_array($iniContent)) {
+                     $dataSourceSettings[$source]['location_map'] = $iniContent;
+                 }
+            }
+            if (!is_array($dataSourceSettings[$source]['location_map'])) {
+                throw new Exception('Portal_mend - missing location mapping for holdings');
+            }
+            $this->settings = $dataSourceSettings[$source];
         }
     }
 
@@ -44,7 +76,43 @@ class MendMarcRecord extends CistBrnoMarcRecord
         $data = parent::toSolrArray();
         
         $data['institution'] = $this->getHierarchicalInstitutions();
+        
+        //holdings information
+        $holdingsArray = array();
+        
+        $fieldNo = '980';
+        foreach ($this->getFields($fieldNo) as $field) {
+            $result = '';
+            foreach ($field['s'] as $subfield) {
+                foreach ($subfield as $code => $value) {
+                    if (isset($this->settings['status_map']) && is_array($this->settings['status_map'])) {
+                        if ($code == 'k') {
+                            $value = $this->mapString($this->settings['status_map'], $value);
+                        }
+                    }
+                    if (isset($this->settings['location_map']) && is_array($this->settings['location_map'])) {
+                        if ($code == 'l') {
+                            $value = $this->mapString($this->settings['location_map'], $value);
+                        }
+                    }
+                    $result .= '$' . $code . $value;
+                }
+            }
+            $result .= '$@'.$this->getInstitution();
+            if (!empty($result)) {
+                if (!array_key_exists($fieldNo, $holdingsArray)) {
+                    $holdingsArray[$fieldNo] = array();
+                }
+                $holdingsArray[$fieldNo][] = $result;
+            }
+        }
+        
+        
+        foreach ($holdingsArray as $fieldNo => $holdings) {
+            $data['holdings'. $fieldNo . '_str_mv'] = $holdings;
+        }
         return $data;
+
     }
 
     public function getID ()
@@ -74,7 +142,8 @@ class MendMarcRecord extends CistBrnoMarcRecord
         return trim($id);
     }
 
-    public function getFormat() {
+    public function getFormat()
+    {
         $formats = parent::getFormat ();
         $field = $this->getField ( '502' );
         if ($field) {
@@ -85,5 +154,15 @@ class MendMarcRecord extends CistBrnoMarcRecord
                     }
         }
         return $formats;
+    }
+    
+    protected function mapString(&$mapping, $key)
+    {
+        if (!is_array($mapping) || !array_key_exists($key, $mapping)) {
+            global $logger;
+            $logger->log('MendMarcRecord', 'No mapping found for key:' . $key, Logger::WARNING);
+            return $key;
+        }
+        return $mapping[$key];
     }
 }

@@ -42,11 +42,14 @@ class MuniMarcRecord extends CistBrnoMarcRecord
     
     public function getID()
     {
-    	$id = parent::getField('998');
-    	if (empty($id)) {
-    	    $id = parent::getID();
+    	$field = parent::getField('990');
+    	if ($field) {
+    	    $subfield = $this->getSubfield($field, 'a');
+    	    if ($subfield) {
+    	        $id = trim($subfield);
+    	    }
     	}
-    	return trim($id);
+    	return isset($id) ? $id : parent::getID();
     }
 
     public function getFormat() {
@@ -54,7 +57,7 @@ class MuniMarcRecord extends CistBrnoMarcRecord
         $field = $this->getField ( '502' );
 	    if ($field) {
             $subfield = $this->getSubfield ( $field, 'a' );
-                if ($subfield && preg_match ( '/^bakalářsk|^disertační|^habilitační|^diplomov|^závěrečn|^disertace|^habilitační|^kandidátské|^klauzutní|^rigorozní/i',
+                if ($subfield && preg_match ( '/^bakalářsk|^disertační|^habilitační|^diplomov|^závěrečn|^disertace|^habilitační|^kandidátské|^klauzutní|^rigorozní/iu',
                   $subfield )) {
                     $formats = array_merge($formats, $this->unifyFormats(array('dissertations_theses')));
                 }
