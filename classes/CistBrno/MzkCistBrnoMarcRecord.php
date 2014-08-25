@@ -28,12 +28,72 @@ class MzkCistBrnoMarcRecord extends CistBrnoMarcRecord
         parent::__construct($data, $oaiID, $source);
         list($oai, $domain, $ident) = explode(':', $oaiID);
         $this->id = $ident;
+
+        //check subfield mapping
+        foreach (array('996r_map', '996l_map') as $field) {
+            $iniContent = false;
+            if (!$this->settings[$field] || !is_array($this->settings[$field])) {
+                global $dataSourceSettings;
+                global $basePath;
+                if ($dataSourceSettings[$source][$field]) {
+                    $iniContent = parse_ini_file($basePath . '/mappings/' . $dataSourceSettings[$source][$field]);
+                    if (is_array($iniContent)) {
+                        $dataSourceSettings[$source][$field] = $iniContent;
+                    }
+                }
+                if (!is_array($dataSourceSettings[$source][$field])) {
+                    throw new Exception('Portal_cistbrno_mzk - missing mapping for '. $field);
+                }
+                $this->settings = $dataSourceSettings[$source];
+            }
+        }
+
     }
 
     public function toSolrArray()
     {
         $data = parent::toSolrArray();
         $data['institution'] = "0/MZK";
+        
+        //holdings information
+        $holdingsArray = array();
+        $fieldNo = '996';
+        if (isset($data['holdings996_str_mv'])) {
+            unset($data['holdings996_str_mv']);
+        }
+        foreach ($this->getFields($fieldNo) as $field) {
+            $result = '';
+            foreach ($field['s'] as $subfield) {
+                foreach ($subfield as $code => $value) {
+                    if ($code == 'r') {
+                        if (isset($this->settings['996r_map']) && is_array($this->settings['996r_map'])) {
+                            $value = $this->mapString($this->settings['996r_map'], $value);
+                        }
+                    }
+                    if ($code == 'l') {
+                        if (isset($this->settings['996l_map']) && is_array($this->settings['996l_map'])) {
+                            $value = $this->mapString($this->settings['996l_map'], $value);
+                        }
+                    }
+                    if (!empty($value)) {
+                        $result .= '$' . $code . $value;
+                    }
+                }
+            }
+            $result .= '$@'.$this->getInstitution();
+            if (!empty($result)) {
+                if (!array_key_exists($fieldNo, $holdingsArray)) {
+                    $holdingsArray[$fieldNo] = array();
+                }
+                $holdingsArray[$fieldNo][] = $result;
+            }
+        }
+         
+         
+        foreach ($holdingsArray as $fieldNo => $holdings) {
+            $data['holdings'. $fieldNo . '_str_mv'] = $holdings;
+        }
+        
         return $data;
     }
 
@@ -43,12 +103,23 @@ class MzkCistBrnoMarcRecord extends CistBrnoMarcRecord
     	if (preg_match('/.*MZK04.*/', $this->getID())) {
     		$formats[] = 'standards_patents';
     	}
+    	
     	return $formats;
     }
     
     public function getID()
     {
         return parent::getID();
+    }
+    
+    protected function mapString(&$mapping, $key)
+    {
+        if (!is_array($mapping) || !array_key_exists($key, $mapping)) {
+            global $logger;
+            $logger->log('MzkCistbrnoMarcRecord', 'No mapping found for key:' . $key, Logger::WARNING);
+            return $key;
+        }
+        return $mapping[$key];
     }
 }
 
