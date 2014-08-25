@@ -518,22 +518,23 @@ class SolrUpdater
                         $this->log->log('updateMergedRecords', "$count merged records (of which $deleted deleted) with $mergedComponents merged parts indexed, $avg records/sec");
                     }
                 } else {
-                    foreach ($children as $child) {
-                        $child['solr']['merged_child_boolean'] = true;
+// ignore merged parts TODO: consider this
+//                     foreach ($children as $child) {
+//                         $child['solr']['merged_child_boolean'] = true;
                     
-                        if ($this->verbose) {
-                            echo "Original deduplicated record {$child['solr']['id']}:\n";
-                            print_r($child['solr']);
-                        }
+//                         if ($this->verbose) {
+//                             echo "Original deduplicated record {$child['solr']['id']}:\n";
+//                             print_r($child['solr']);
+//                         }
                     
-                        ++$count;
-                        $res = $this->bufferedUpdate($child['solr'], $count, $noCommit);
-                        if ($res) {
-                            $pc->add($count);
-                            $avg = $pc->getSpeed(); 
-                            $this->log->log('updateMergedRecords', "$count merged records (of which $deleted deleted) with $mergedComponents merged parts indexed, $avg records/sec");
-                        }
-                    }
+//                         ++$count;
+//                         $res = $this->bufferedUpdate($child['solr'], $count, $noCommit);
+//                         if ($res) {
+//                             $pc->add($count);
+//                             $avg = $pc->getSpeed(); 
+//                             $this->log->log('updateMergedRecords', "$count merged records (of which $deleted deleted) with $mergedComponents merged parts indexed, $avg records/sec");
+//                         }
+//                     }
                     
                     // Remove duplicate fields from the merged record
                     foreach ($merged as $fieldkey => $value) {
