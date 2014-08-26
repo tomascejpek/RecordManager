@@ -230,8 +230,6 @@ class MzkMarcRecord extends MappablePortalMarcRecord
     public function getCallNumbers()
     {
         $callnumbers = $this->getFieldSubfields('910', array('b'));
-        print "OK\n";
-        print_r($callnumbers);
         return explode(' ', $callnumbers);
     }
 
