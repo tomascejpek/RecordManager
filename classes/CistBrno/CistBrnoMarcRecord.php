@@ -17,6 +17,9 @@ require_once __DIR__.'/../Logger.php';
  */
 class CistBrnoMarcRecord extends PortalsCommonMarcRecord
 {
+    
+    protected $allFields = array(856, 880, 902, 928, 964, 975, 978, 981, 982, 983, 984, 985);
+    
     /**
      * Constructor
      *
@@ -109,6 +112,31 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
         foreach ($holdingsArray as $fieldNo => $holdings) {
             $data['holdings'. $fieldNo . '_str_mv'] = $holdings;
         }
+        
+        
+        $data['topic'] = $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_BOTH, '600', array('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'x', 'y', 'z')),
+                array(MarcRecord::GET_BOTH, '610', array('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'k', 'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'u', 'v', 'x', 'y', 'z')),
+                array(MarcRecord::GET_BOTH, '611', array('a', 'c', 'd', 'e', 'f', 'g', 'h', 'j', 'k', 'l', 'n', 'p', 'q', 's', 't', 'u', 'v', 'x', 'y', 'z')),
+                array(MarcRecord::GET_BOTH, '630', array('a', 'd', 'e', 'f', 'g', 'h', 'k', 'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'v', 'x', 'y', 'z')),
+                array(MarcRecord::GET_BOTH, '650', array('a', 'b', 'c', 'd', 'e', 'v', 'x', 'y', 'z')),
+                array(MarcRecord::GET_BOTH, '964', array('a'))
+            )
+        );
+        
+        $data['era_facet'] = $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '630', array('y')),
+                array(MarcRecord::GET_NORMAL, '648', array('a')),
+                array(MarcRecord::GET_NORMAL, '648', array('y')),
+                array(MarcRecord::GET_NORMAL, '650', array('y')),
+                array(MarcRecord::GET_NORMAL, '651', array('y')),
+                array(MarcRecord::GET_NORMAL, '655', array('y')),
+                array(MarcRecord::GET_NORMAL, '985', array('a'))
+            ),
+            false, true, true
+        );
         return $data;
     }
     
@@ -150,13 +178,17 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
     public function getFullAuthor() {
         return $this->getFieldsSubfields(
             array(
-                array(MarcRecord::GET_BOTH, '110', array('a', 'b', 'c')),
-                array(MarcRecord::GET_BOTH, '111', array('a', 'b', 'c', 'e', 'q')),
-                array(MarcRecord::GET_BOTH, '700', array('a', 'b', 'c', 'd', 'q')),
-                array(MarcRecord::GET_BOTH, '710', array('a', 'b', 'c')),
-                array(MarcRecord::GET_BOTH, '711', array('a', 'b', 'c', 'e', 'q')),
-                array(MarcRecord::GET_BOTH, '975', array('a', 'b', 'c', 'd', 'q')),
-                array(MarcRecord::GET_BOTH, '976', array('a', 'b', 'c')),
+                array(MarcRecord::GET_ALT, '100', array('a', 'b', 'c', 'd')),
+                array(MarcRecord::GET_BOTH, '110', array('a', 'b')),
+                array(MarcRecord::GET_BOTH, '111', array('a', 'b')),
+                array(MarcRecord::GET_BOTH, '700', array('a', 'b', 'c', 'd', 'e')),
+                array(MarcRecord::GET_BOTH, '710', array('a', 'b')),
+                array(MarcRecord::GET_BOTH, '711', array('a', 'b')),
+                array(MarcRecord::GET_BOTH, '975', array('a', 'b', 'c', 'd')),
+                array(MarcRecord::GET_BOTH, '978', array('a', 'b', 'c')),
+                array(MarcRecord::GET_BOTH, '981', array('a', 'b', 'c', 'd')),
+                array(MarcRecord::GET_BOTH, '982', array('a')),
+                array(MarcRecord::GET_BOTH, '983', array('a', 'b', 'c', 'd')),
             )
         );
     }
@@ -290,7 +322,7 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
                 array('653',  null, null,  array('a')),
                 array('655',  null,  '7',  array('a', 'v', 'x', 'y', 'z')),
                 array('964',  null, null,  array('a')),
-                array('967',  null, null,  array('a', 'b', 'c')),
+                array('967',  null, null,  array('a', 'b', 'c'))
             )
         );
     }
@@ -389,4 +421,62 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
     	}
     	return array_unique($unified);
     }
+    
+    
+    protected function getAllFields()
+    {
+        $allFields = array();
+        $subfieldFilter = array(
+                '650' => array('2', '6', '8'),
+                '773' => array('6', '7', '8', 'w'),
+                '856' => array('6', '8', 'q')
+        );
+        $allFields = array();
+        foreach ($this->fields as $tag => $fields) {
+            if (($tag >= 100 && $tag < 841) || in_array($tag, $this->allFields)) {
+                foreach ($fields as $field) {
+                    $subfields = $this->getAllSubfields(
+                            $field,
+                            isset($subfieldFilter[$tag]) ? $subfieldFilter[$tag] : array('6', '8')
+                    );
+                    if ($subfields) {
+                        $allFields = array_merge($allFields, $subfields);
+                    }
+                }
+            }
+        }
+        $allFields = array_map(
+                function($str) {
+                    return MetadataUtils::stripLeadingPunctuation(
+                            MetadataUtils::stripTrailingPunctuation($str)
+                    );
+                },
+                $allFields
+        );
+        return array_values(array_unique($allFields));
+    }
+    
+    public function getISBNs()
+    {
+        $arr = array();
+        $fields = array_merge($this->getFields('020'), $this->getFields('902'));
+        foreach ($fields as $field) {
+            $isbn = $this->getSubfield($field, 'a');
+            
+            $isbn = str_replace('-', '', $isbn);
+            if (!preg_match('{([0-9]{9,12}[0-9xX])}', $isbn, $matches)) {
+                continue;
+            };
+            $isbn = $matches[1];
+            if (strlen($isbn) == 10) {
+                $isbn = MetadataUtils::isbn10to13($isbn);
+            }
+            if ($isbn) {
+                $arr[] = $isbn;
+            }
+        }
+
+        return array_values(array_unique($arr));
+    }
+
 }
