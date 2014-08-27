@@ -143,7 +143,12 @@ class RecordManager
         // Read settings for CistBrno
         if ($configArray['CistBrno'] && $configArray['CistBrno']['format_unification']) {
         	$configArray['CistBrno']['format_unification_array'] = parse_ini_file($configArray['CistBrno']['format_unification']);
-        } 
+        }
+
+        // Read settings for VNF
+        if ($configArray['VNF'] && $configArray['VNF']['format_unification']) {
+            $configArray['VNF']['format_unification_array'] = parse_ini_file($configArray['VNF']['format_unification']);
+        }
     }
 
     /**
@@ -1346,8 +1351,7 @@ class RecordManager
                     if ($candidate['deleted'] || $candidate['source_id'] == $this->sourceId) {
                         continue;
                     }
-                    // Don't bother with id or title dedup if ISBN dedup already failed
-//                     if ($type != 'isbn_keys') {
+                    if ($type != 'isbn_keys') {
                         if (isset($candidate['isbn_keys'])) {
                             $sameKeys = array_intersect($ISBNArray, $candidate['isbn_keys']);
                             if ($sameKeys) {
@@ -1360,7 +1364,7 @@ class RecordManager
                                 continue;
                             }
                         }
-//                     }
+                    }
                     ++$candidateCount;
                     // Verify the candidate has not been deduped with this source yet
                     if (isset($candidate['dedup_id']) && (!isset($record['dedup_id']) || $candidate['dedup_id'] != $record['dedup_id'])) {
@@ -1505,15 +1509,15 @@ class RecordManager
             }
             return false;
         }
-        
+    
         $origFormat = $origRecord->getFormat();
         $cFormat = $cRecord->getFormat();
         
         $origFormat = is_array($origFormat) ? $origFormat : array($origFormat);
-        $cFormat = is_array($cFormat) ? $origFormat : array($cFormat);
+        $cFormat = is_array($cFormat) ? $cFormat : array($cFormat);
         if (!array_uintersect($origFormat, $cFormat, 'strcasecmp') && $this->solrUpdater->mapFormat($record['source_id'], $origFormat) != $this->solrUpdater->mapFormat($candidate['source_id'], $cFormat)) {
             if ($this->verbose) {
-                echo "--Format mismatch: " . print_r($origFormat) . "!=" . print_r($cFormat) . "\n";
+                echo "--Format mismatch: " . print_r($origFormat, true) . "!=" . print_r($cFormat, true) . "\n";
             }
             return false;
         }
