@@ -210,6 +210,9 @@ class PortalsCommonMarcRecord extends MarcRecord
     	$leader = $this->getField('000');
     	$leaderBit = substr($leader, 6, 1);
     	switch (strtoupper($leaderBit)) {
+                case 'A':
+                        $formats[] = 'Book_000_6';
+                        break;
     		case 'C':
     			$formats[] = 'MusicalScoreC_000_6';
     			break; 
@@ -256,9 +259,7 @@ class PortalsCommonMarcRecord extends MarcRecord
     		case 'M':
     			if ($online) {
     				$formats[] = 'eBook_000_7';
-    			} else {
-    				$formats[] = 'Book_000_7';
-    			}
+    			} 
     			break;
     			// Serial
     		case 'S':

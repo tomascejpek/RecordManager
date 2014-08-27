@@ -141,20 +141,6 @@ class MendMarcRecord extends CistBrnoMarcRecord
         }
         return trim($id);
     }
-
-    public function getFormat()
-    {
-        $formats = parent::getFormat ();
-        $field = $this->getField ( '502' );
-        if ($field) {
-            $subfield = $this->getSubfield ( $field, 'a' );
-            if ($subfield && preg_match ( '/^bakalářsk|^disertační|^habilitační|^diplomov|^závěrečn|^disertace|^habilitační|^kandidátské|^klauzutní|^rigorozní/i',
-                    $subfield )) {
-                        $formats = array_merge($formats, $this->unifyFormats(array('dissertations_theses')));
-                    }
-        }
-        return $formats;
-    }
     
     protected function mapString(&$mapping, $key)
     {

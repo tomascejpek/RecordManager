@@ -478,5 +478,44 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
 
         return array_values(array_unique($arr));
     }
+    
+    public function getFormat() {
+        $formats = parent::getFormat ();
+        $string = '';
+        foreach (array('500', '502') as $fieldNo) {
+            $field = $this->getField ($fieldNo);
+    	    if ($field) {
+                $subfield = $this->getSubfield ( $field, 'a' );
+                if ($subfield) {
+                    $string .= '+' . $subfield;
+                }
+    	    }
+        }
 
+        if (empty($string)) {
+            return $this->cleanupFormats($formats);
+        }
+        //assume UTF-8?
+        $translit = iconv('UTF-8', 'ASCII//TRANSLIT', $string);
+        if ($translit !== false && preg_match ('/bakalarsk|di[sz]+ertacni|habilitacni|diplomov|zaverecn|di[sz]+ertace|habilitacn|kandidatske|klauzutni|rigorozni|rocnikov/i',
+            $translit )) {
+             $formats = array_merge($formats, $this->unifyFormats(array('dissertations_theses')));
+         }
+        
+        return $this->cleanupFormats($formats);
+    }
+
+    /**
+     * cleanup in formats - remove eliminating formats
+     */
+    protected function cleanupFormats($formats = array()) 
+    {
+        //remove manuscript format from dissertations
+        if (in_array('dissertations_theses', $formats) && in_array('cistbrno_dissertations_theses', $formats)) {
+            if (in_array('cistbrno_manuscripts', $haystack)) {
+                return array_filter($formats, function ($a) { return strcasecmp($a, 'cistbrno_manuscripts') != 0; });   
+            }
+        }
+        return $formats;
+    }
 }
