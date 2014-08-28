@@ -501,7 +501,6 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
             $translit )) {
              $formats = array_merge($formats, $this->unifyFormats(array('dissertations_theses')));
          }
-        
         return $this->cleanupFormats($formats);
     }
 
@@ -511,8 +510,8 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
     protected function cleanupFormats($formats = array()) 
     {
         //remove manuscript format from dissertations
-        if (in_array('dissertations_theses', $formats) && in_array('cistbrno_dissertations_theses', $formats)) {
-            if (in_array('cistbrno_manuscripts', $haystack)) {
+        if (in_array('dissertations_theses', $formats) || in_array('cistbrno_dissertations_theses', $formats)) {
+            if (in_array('cistbrno_manuscripts', $formats)) {
                 return array_filter($formats, function ($a) { return strcasecmp($a, 'cistbrno_manuscripts') != 0; });   
             }
         }

@@ -1513,9 +1513,7 @@ class RecordManager
         $origFormat = $origRecord->getFormat();
         $cFormat = $cRecord->getFormat();
         
-        $origFormat = is_array($origFormat) ? $origFormat : array($origFormat);
-        $cFormat = is_array($cFormat) ? $cFormat : array($cFormat);
-        if (!array_uintersect($origFormat, $cFormat, 'strcasecmp') && $this->solrUpdater->mapFormat($record['source_id'], $origFormat) != $this->solrUpdater->mapFormat($candidate['source_id'], $cFormat)) {
+        if (!$this->matchFormats($origFormat, $cFormat)) {
             if ($this->verbose) {
                 echo "--Format mismatch: " . print_r($origFormat, true) . "!=" . print_r($cFormat, true) . "\n";
             }
@@ -2090,5 +2088,22 @@ class RecordManager
             fwrite($fout , print_r($metadataRecord->toSolrArray(), true));
             if (++$count >= $max) break;
         }
+    }
+    
+    /**
+     * decides whether two formats match
+     * @param mixed $origFormat
+     * @param mixed $cFormat
+     * @return boolean
+     */
+    protected function matchFormats($origFormat, $cFormat)
+    {  
+        $first = is_array($origFormat) ? $origFormat : array($origFormat);
+        $second = is_array($cFormat) ? $cFormat : array($cFormat);
+        
+        //skipped matching througn solrUpdater
+        $intersect = array_uintersect($origFormat, $cFormat, 'strcasecmp'); 
+        //either both or any are in brail
+        return count($intersect) > 0 && in_array('cistbrno_books_in_braill', $first) === in_array('cistbrno_books_in_braill', $second);  
     }
 }
