@@ -1462,6 +1462,16 @@ class RecordManager
         if ($this->verbose) {
             echo "\nCandidate " . $candidate['_id'] . ":\n" . MetadataUtils::getRecordData($candidate, true) . "\n";
         }
+        
+        $origFormat = $origRecord->getFormat();
+        $cFormat = $cRecord->getFormat();
+        //format match is nescessary
+        if (!$this->matchFormats($origFormat, $cFormat)) {
+            if ($this->verbose) {
+                echo "--Format mismatch: " . print_r($origFormat, true) . "!=" . print_r($cFormat, true) . "\n";
+            }
+            return false;
+        }
          
         // Check for common ISBN
         $origISBNs = $origRecord->getISBNs();
@@ -1510,15 +1520,6 @@ class RecordManager
             return false;
         }
     
-        $origFormat = $origRecord->getFormat();
-        $cFormat = $cRecord->getFormat();
-        
-        if (!$this->matchFormats($origFormat, $cFormat)) {
-            if ($this->verbose) {
-                echo "--Format mismatch: " . print_r($origFormat, true) . "!=" . print_r($cFormat, true) . "\n";
-            }
-            return false;
-        }
         $origYear = $origRecord->getPublicationYear();
         $cYear = $cRecord->getPublicationYear();
         if ($origYear && $cYear && $origYear != $cYear) {
