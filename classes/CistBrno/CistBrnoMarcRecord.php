@@ -100,7 +100,14 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
                          $result .= '$' . $code . $value;
                      }
                  }
+
+                 $description =  $this->getFieldSubfields('245', array('n', 'p'));
+                 if (!empty($description)) {
+                     $result .= '$%' . $description;
+                 }
+
                  $result .= '$@'.$this->getInstitution();
+                 $result .= '$*'.$this->getID();
                  if (!empty($result)) {
                      if (!array_key_exists($fieldNo, $holdingsArray)) {
                          $holdingsArray[$fieldNo] = array();
@@ -137,6 +144,9 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
             ),
             false, true, true
         );
+        
+        
+        $data['title_portaly_txtP'] =  $this->getFieldSubfields('245', array('a', 'b'));
         return $data;
     }
     
@@ -389,16 +399,14 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
             return $instArray;
         }
         
-        $field = parent::getField($lvl2field);
-        if ($field) {       
+        foreach (parent::getFields($lvl2field) as $field) {       
             $subField = parent::getSubfields($field, $lvl2subfield);
             if ($subField) {
-                $depth++;
-                $institution .= '/'.$subField;
-                $instArray[] = $depth.'/'.$institution;
+                $instArray[] = '1/'. $institution . '/'.$subField;
             }
         }
-        return $instArray;
+        
+        return array_values(array_unique($instArray));
     }
     
     /**

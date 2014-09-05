@@ -98,7 +98,12 @@ class MendMarcRecord extends CistBrnoMarcRecord
                     $result .= '$' . $code . $value;
                 }
             }
-            $result .= '$@'.$this->getInstitution();
+            $description = $this->getFieldSubfields('245', array('n', 'p'));
+            if ($description) {
+                $result .= '$%' . $description;  
+            }    
+            $result .= '$@' . $this->getInstitution();
+            $result .= '$*' . $this->getID();
             if (!empty($result)) {
                 if (!array_key_exists($fieldNo, $holdingsArray)) {
                     $holdingsArray[$fieldNo] = array();

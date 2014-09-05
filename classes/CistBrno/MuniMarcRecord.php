@@ -31,10 +31,12 @@ class MuniMarcRecord extends CistBrnoMarcRecord
         $data = parent::toSolrArray();
 
         $data['institution'] = $this->getHierarchicalInstitutions('996', 'l');
-        if (isset($data['institution'][1])) {
-            // map FF-S, FF-K, FF-HUD to FF
-            if (preg_match('/^1\/MUNI\/FF/',$data['institution'][1])) {
-                $data['institution'][1] = '1/MUNI/FF';
+        for ($i = 0; $i < count($data['institution']); $i++) {
+            if (preg_match('/^1\/MUNI\/FF/',$data['institution'][$i])) {
+                $data['institution'][$i] = '1/MUNI/FF';
+            }
+            if (preg_match('/^1\/MUNI\/Přír/u',$data['institution'][$i])) {
+                $data['institution'][$i] = '1/MUNI/PRIF';
             }
         }
         return $data;

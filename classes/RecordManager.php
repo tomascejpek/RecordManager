@@ -547,6 +547,8 @@ class RecordManager
                 );
             }
         }
+     
+        
         foreach ($this->dataSourceSettings as $source => $settings) {
             try {
                 if ($sourceId && $sourceId != '*' && $source != $sourceId) {
@@ -1342,13 +1344,38 @@ class RecordManager
                 if ($this->verbose) {
                     echo "Search: '$keyPart'\n";
                 }
-                $candidates = $this->db->record->find(array($type => $keyPart));
+                $candidates = $this->db->record->find(
+                    array(
+                        $type => $keyPart,
+                        '_id' => array('$ne' => $record['_id']),
+//                         'dedup_id' => array('$exists' => false)
+                    )
+                );
                 $processed = 0;
                 // Go through the candidates, try to match
                 $matchRecord = null;
+                
+                //pre-sort candidates - already deduped records has higher priority
+                //fixed permutation cycles in deduped records
+                $sortedCandidates = array();
                 foreach ($candidates as $candidate) {
+                    $sortedCandidates[] = $candidate;
+                }
+                usort($sortedCandidates, 
+                    function ($a, $b) {
+                        $hasA = array_key_exists('dedup_id', $a);
+                        $hasB = array_key_exists('dedup_id', $b);
+                        if ($hasA == $hasB)
+                            return 0;
+                        elseif ($hasA)
+                            return -1;
+                        return 1; 
+                    }
+                );
+                
+                foreach ($sortedCandidates as $candidate) {
                     // Don't dedup with this source or deleted. It's faster to check here than in find!
-                    if ($candidate['deleted'] || $candidate['source_id'] == $this->sourceId) {
+                    if ($candidate['deleted']) {
                         continue;
                     }
                     if ($type != 'isbn_keys') {
@@ -1367,14 +1394,14 @@ class RecordManager
                     }
                     ++$candidateCount;
                     // Verify the candidate has not been deduped with this source yet
-                    if (isset($candidate['dedup_id']) && (!isset($record['dedup_id']) || $candidate['dedup_id'] != $record['dedup_id'])) {
-                        if ($this->db->record->find(array('dedup_id' => $candidate['dedup_id'], 'source_id' => $this->sourceId))->limit(1)->count() > 0) {
-                            if ($this->verbose) {
-                                echo "Candidate {$candidate['_id']} already deduplicated\n";
-                            }
-                            continue;
-                        }
-                    }
+//                     if (isset($candidate['dedup_id']) && (!isset($record['dedup_id']) || $candidate['dedup_id'] != $record['dedup_id'])) {
+//                         if ($this->db->record->find(array('dedup_id' => $candidate['dedup_id'], 'source_id' => $this->sourceId))->limit(1)->count() > 0) {
+//                             if ($this->verbose) {
+//                                 echo "Candidate {$candidate['_id']} already deduplicated\n";
+//                             }
+//                             continue;
+//                         }
+//                     }
 
                     if (++$processed > 1000 || (isset($this->tooManyCandidatesKeys["$type=$keyPart"]) && $processed > 100)) {
                         // Too many candidates, give up..
@@ -1637,6 +1664,7 @@ class RecordManager
             array('multiple' => true)
         );
     }
+    
 
     /**
      * Create a new dedup record
@@ -1648,6 +1676,23 @@ class RecordManager
      */
     protected function createDedupRecord($id1, $id2)
     {
+        
+        $record = $this->db->dedup->findOne(
+            array('$or' =>
+                array(
+                    array('ids' => $id1),
+                    array('ids' => $id2)
+                )
+            )
+        );
+        
+        if ($record) {
+            $ids = is_array($record['ids']) ? $record['ids'] : array();
+            $record['ids'] = array_values(array_unique(array_merge($ids, array($id1, $id2))));
+            $this->db->dedup->save($record);
+            return $record['_id'];
+        }
+        
         $record = array(
             '_id' => new MongoId(),
             'changed' => new MongoDate(),

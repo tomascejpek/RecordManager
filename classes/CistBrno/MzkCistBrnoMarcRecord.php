@@ -75,12 +75,20 @@ class MzkCistBrnoMarcRecord extends CistBrnoMarcRecord
                             $value = $this->mapString($this->settings['996l_map'], $value);
                         }
                     }
+
                     if (!empty($value)) {
                         $result .= '$' . $code . $value;
                     }
                 }
             }
+            
+
+            $description =  $this->getFieldSubfields('245', array('n', 'p'));
+            if (!empty($description)) {
+                $result .= '$%' . $description;
+            }
             $result .= '$@'.$this->getInstitution();
+            $result .= '$*'.$this->getID();
             if (!empty($result)) {
                 if (!array_key_exists($fieldNo, $holdingsArray)) {
                     $holdingsArray[$fieldNo] = array();
