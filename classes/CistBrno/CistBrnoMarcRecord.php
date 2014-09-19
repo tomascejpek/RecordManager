@@ -145,6 +145,22 @@ class CistBrnoMarcRecord extends PortalsCommonMarcRecord
             false, true, true
         );
         
+        $data['genre_facet'] = $this->getFieldsSubfields(
+            array(
+                array(MarcRecord::GET_NORMAL, '600', array('v')),
+                array(MarcRecord::GET_NORMAL, '610', array('v')),
+                array(MarcRecord::GET_NORMAL, '611', array('v')),
+                array(MarcRecord::GET_NORMAL, '630', array('v')),
+                array(MarcRecord::GET_NORMAL, '648', array('v')),
+                array(MarcRecord::GET_NORMAL, '650', array('v')),
+                array(MarcRecord::GET_NORMAL, '651', array('v')),
+                array(MarcRecord::GET_NORMAL, '655', array('a')),
+                array(MarcRecord::GET_NORMAL, '655', array('v'))
+            ),
+            false, true, true
+       );
+       
+        
         
         $data['title_portaly_txtP'] =  $this->getFieldSubfields('245', array('a', 'b'));
         return $data;
