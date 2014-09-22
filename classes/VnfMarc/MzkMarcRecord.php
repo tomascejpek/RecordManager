@@ -54,15 +54,15 @@ class MzkMarcRecord extends VnfMarcRecord
         parent::__construct($data, $oaiID, $source);
     }
 
-    public function checkRecord() 
-    {
-	$format = parent:: getFormat();
-	if (strcasecmp ($format ,'CD') == 0 || strcasecmp($format,'SoundRecording') == 0
-           || strcasecmp ($format ,'SoundDisc') == 0 || strcasecmp($format,'MusicRecording') == 0) {
-            return true;
-        }
-        return false;
-    } 
+//     public function checkRecord() 
+//     {
+// 	$format = parent:: getFormat();
+// 	if (strcasecmp ($format ,'CD') == 0 || strcasecmp($format,'SoundRecording') == 0
+//            || strcasecmp ($format ,'SoundDisc') == 0 || strcasecmp($format,'MusicRecording') == 0) {
+//             return true;
+//         }
+//         return false;
+//     } 
 
     
 }

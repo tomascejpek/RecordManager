@@ -58,4 +58,20 @@ class CbvkMarcRecord extends VnfMarcRecord
         $data = parent::toSolrArray();
         return $data;
     }
+    
+    public function getFormat() {
+        //gramofonov[ae] desk[ay] in field 300
+        $field = $this->getField('300');
+        $formats = array();
+        if ($field) {
+            $subfield = $this->getSubfield($field, 'a');
+            if ($subfield) {
+                if (preg_match('/.*gramofonov(a|á|e|é|ych|ých)\sdes(ka|ky|ek).*/ui', $subfield)) {
+                    $formats = array('vnf_vinyl','vnf_album');
+                }
+            }
+        }
+        
+        return empty($formats) ? parent::getFormat() : $formats;
+    }
 }

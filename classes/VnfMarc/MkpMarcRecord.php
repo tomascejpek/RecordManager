@@ -53,34 +53,32 @@ class MkpMarcRecord extends VnfMarcRecord
     {
         parent::__construct($data, $oaiID, $source);
     }
-
-    /**
-    * calls toSolrArray() from parent and transforms 'format' field
-    */
-    public function toSolrArray() {
-        $data = parent::toSolrArray();
-        
-        $format = $this->getFieldsSubfields(
-            array(
-                array(MarcRecord::GET_BOTH, '910', array('b'))
-            ),
-            true
-        );
-	if (is_array($format) && isset($format[0])) {
-            $format = $format[0];
-        } else {
-            $format = '';
+  
+    public function getFormat() {
+        $field = $this->getField('910');
+//         if ($field) {
+//             $subfield = $this->getSubfield($field, 'b');
+//             if ($subfield) {
+//                 if (stripos($subfield,'CD') !== false) {
+//                     $format = 'mkp_CD';
+//                 } elseif (stripos($subfield,'KZ') !== false) {
+//                     $format = 'mkp_KZ';
+//                 } elseif (stripos($subfield,'SV') !== false) {
+//                     $format = 'mkp_SV';
+//                 }
+//             }
+//         }
+        $subfields = $this->getFieldsAllSubfields('653');
+        if ($subfields && is_array($subfields) && count($subfields) > 0) {
+            $formatSub = preg_grep("/nosi/", $subfields[0]);
+            if (count($formatSub) > 0) {
+                $format = 'mkp_' . trim(substr(current($formatSub), 7)); 
+            }
         }
 
-        if (stripos($format,'CD') !== false) {
-            $data['format'] = 'CD';
-        } elseif (stripos($format,'KZ') !== false) {
-            $data['format'] = 'SoundCassette';
-        } elseif (stripos($format,'SV') !== false) {
-            $data['format'] = 'SoundDisc';
-        }
-       
-        return $data;
+        $formats = isset($format) ? $this->unifyFormats(array($format)) : array();
+        $formats[] = 'vnf_album';
+        return $formats;
     }
     
 }

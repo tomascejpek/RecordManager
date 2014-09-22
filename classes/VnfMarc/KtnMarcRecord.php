@@ -1,4 +1,4 @@
-<?
+<?php
 /**
  * MarcRecord Class
  *
@@ -53,6 +53,19 @@ class KtnMarcRecord extends VnfMarcRecord
     {
         parent::__construct($data, $oaiID, $source);
     }
+    
+    public function checkRecord() {
+        $field = $this->getField('300');
+        if ($field) {
+            $subfields = $this->getAllSubfields($field);
+            if ($subfields) {
+                $concat = implode('__', $subfields);
+                //filter records in brail
+                return !preg_match('/.*brail.*/i', $concat);
+            } 
+        }
+        return true;
+    }
 
     protected function parseLineMarc($marc) {
         
@@ -104,8 +117,6 @@ class KtnMarcRecord extends VnfMarcRecord
         }
         $this->fields = $finalField;
     }
-
-
 
 }
 ?>
