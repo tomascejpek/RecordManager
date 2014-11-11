@@ -1236,7 +1236,34 @@ class SolrUpdater
                 $merged['allfields'] = array_values(array_merge($merged['allfields'], $add['allfields']));
             }
         }
-        
+        $len = 0;
+        $longest = 0;
+        $longFields = array('physical', 'audience_str_mv', 'production_credits_str_mv', 'performer_note_str_mv', 'publisher_str', 'summary_txt');
+        if (isset($add['contents'])) {
+            if (preg_match('/^vnf_sup.*/', $add['contents'])) {
+                $merged['contents'] = array($add['contents']);
+                $merged['contents_txt'] = array($add['contents_txt']);
+            } else {
+                $longFields[] = 'contents';
+                $longFields[] = 'contents_txt';
+            }
+        }
+        foreach ($longFields as $field) {
+            if (isset($merged[$field]) && is_array($merged[$field])) {
+                foreach ($merged[$field] as $index => $current) {
+                    if ($len < strlen($current)) {
+                        $len = strlen($current);
+                        $longest = $index;
+                    }
+                }
+                $merged[$field] = array($merged[$field][$index]);
+            } elseif (isset($add[$field])) {
+                $merged[$field] = $add[$field];
+            }
+        }
+
+
+        $merged['format'] = VnfMarcRecord::unifyFormats($merged['format']);
         return $merged;
     }
 

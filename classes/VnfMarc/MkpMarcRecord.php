@@ -55,19 +55,6 @@ class MkpMarcRecord extends VnfMarcRecord
     }
   
     public function getFormat() {
-        $field = $this->getField('910');
-//         if ($field) {
-//             $subfield = $this->getSubfield($field, 'b');
-//             if ($subfield) {
-//                 if (stripos($subfield,'CD') !== false) {
-//                     $format = 'mkp_CD';
-//                 } elseif (stripos($subfield,'KZ') !== false) {
-//                     $format = 'mkp_KZ';
-//                 } elseif (stripos($subfield,'SV') !== false) {
-//                     $format = 'mkp_SV';
-//                 }
-//             }
-//         }
         $subfields = $this->getFieldsAllSubfields('653');
         if ($subfields && is_array($subfields) && count($subfields) > 0) {
             $formatSub = preg_grep("/nosi/", $subfields[0]);
@@ -77,7 +64,7 @@ class MkpMarcRecord extends VnfMarcRecord
         }
 
         $formats = isset($format) ? $this->unifyFormats(array($format)) : array();
-        $formats[] = 'vnf_album';
+        $formats[] = self::VNF_ALBUM;
         return $formats;
     }
     

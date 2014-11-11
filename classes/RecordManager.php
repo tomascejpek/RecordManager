@@ -1143,7 +1143,7 @@ class RecordManager
                     $this->__storeIntoBuffer($dbRecord);
                     ++$count;
                 } else {
-                    $this->log->log('StoreRecord', 'Skipping record '.$metadataRecord->getID());
+//                     $this->log->log('StoreRecord', 'Skipping record '.$metadataRecord->getID());
                 }
             } else {
                 $this->__storeIntoBuffer($dbRecord);
@@ -1348,6 +1348,7 @@ class RecordManager
                     array(
                         $type => $keyPart,
                         '_id' => array('$ne' => $record['_id']),
+                        'source_id' => (array('$ne' => $record['source_id']))
 //                         'dedup_id' => array('$exists' => false)
                     )
                 );
@@ -1532,6 +1533,17 @@ class RecordManager
             return true; 
         }
         
+        
+    
+        $origYear = $origRecord->getPublicationYear();
+        $cYear = $cRecord->getPublicationYear();
+        if (!$origYear || !$cYear || $origYear != $cYear) {
+            if ($this->verbose) {
+                echo "--Year mismatch: $origYear != $cYear\n";
+            }
+            return false;
+        }
+        
         $origISSNs = $origRecord->getISSNs();
         $cISSNs = $cRecord->getISSNs();
         $commonISSNs = array_intersect($origISSNs, $cISSNs);
@@ -1546,15 +1558,8 @@ class RecordManager
             }
             return false;
         }
-    
-        $origYear = $origRecord->getPublicationYear();
-        $cYear = $cRecord->getPublicationYear();
-        if ($origYear && $cYear && $origYear != $cYear) {
-            if ($this->verbose) {
-                echo "--Year mismatch: $origYear != $cYear\n";
-            }
-            return false;
-        }
+        
+        
         $pages = $origRecord->getPageCount();
         $cPages = $cRecord->getPageCount();
         if ($pages && $cPages && abs($pages-$cPages) > 10) {
@@ -2146,6 +2151,14 @@ class RecordManager
     {  
         $first = is_array($origFormat) ? $origFormat : array($origFormat);
         $second = is_array($cFormat) ? $cFormat : array($cFormat);
+        
+        $origFormat = array_diff($origFormat, array(VnfMarcRecord::VNF_UNSPEC, VnfMarcRecord::VNF_ALBUM));
+        $origFormat = array_diff($origFormat, array(VnfMarcRecord::VNF_UNSPEC, VnfMarcRecord::VNF_ALBUM));
+
+        //VNF dont't match tracks
+        if (in_array(VnfMarcRecord::VNF_TRACK, $cFormat) || in_array(VnfMarcRecord::VNF_TRACK, $origFormat)) {
+            return false;
+        }
         
         //skipped matching througn solrUpdater
         $intersect = array_uintersect($origFormat, $cFormat, 'strcasecmp'); 

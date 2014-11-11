@@ -36,14 +36,14 @@ class SvkkMarcRecord extends VnfMarcRecord
                 $format = explode(' ', $subfield);
                 if (is_array($format) && count($format) > 0) {
                     switch($format[0]) {
-                        case 'CD': return $this->mergeAndUnify('vnf_CD', parent::getFormat());
-                        case 'G':  return $this->mergeAndUnify('vnf_vinyl', parent::getFormat());
-                        case 'K':  return $this->mergeAndUnify('vnf_SoundCassette', parent::getFormat());
+                        case 'CD': return array(self::VNF_ALBUM, self::VNF_CD);
+                        case 'G':  return array(self::VNF_ALBUM, self::VNF_VINYL);
+                        case 'K':  return array(self::VNF_ALBUM, self::VNF_SOUND_CASSETTE);
                     }
                 }
             }
             
         }
-        return $this->mergeAndUnify('vnf_unspecified', parent::getFormat());
+        return $this->mergeAndUnify(parent::getFormat(), self::VNF_UNSPEC);
     }
 }

@@ -67,7 +67,7 @@ class CbvkMarcRecord extends VnfMarcRecord
             $subfield = $this->getSubfield($field, 'a');
             if ($subfield) {
                 if (preg_match('/.*gramofonov(a|á|e|é|ych|ých)\sdes(ka|ky|ek).*/ui', $subfield)) {
-                    $formats = array('vnf_vinyl','vnf_album');
+                    $formats = array(self::VNF_VINYL, self::VNF_ALBUM);
                 }
             }
         }

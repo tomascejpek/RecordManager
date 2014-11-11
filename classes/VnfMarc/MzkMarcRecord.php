@@ -54,15 +54,26 @@ class MzkMarcRecord extends VnfMarcRecord
         parent::__construct($data, $oaiID, $source);
     }
 
-//     public function checkRecord() 
-//     {
-// 	$format = parent:: getFormat();
-// 	if (strcasecmp ($format ,'CD') == 0 || strcasecmp($format,'SoundRecording') == 0
-//            || strcasecmp ($format ,'SoundDisc') == 0 || strcasecmp($format,'MusicRecording') == 0) {
-//             return true;
-//         }
-//         return false;
-//     } 
-
-    
+    public function getFormat($keepRemove = false) 
+    {
+        $formats = parent::getFormat($keepRemove);
+        if (in_array(self::VNF_UNSPEC, $formats)) {
+            $field = $this->getField('996');
+            if ($field) {
+                $subfield = $this->getSubfield($field, 'c');
+                if ($subfield ) {
+                    if (preg_match('/.*CD.*/', $subfield)) {
+                        return array(self::VNF_ALBUM, self::VNF_CD);
+                    } elseif (preg_match('/.*LP.*|.*SP.*/', $subfield)) {
+                        return array(self::VNF_ALBUM, self::VNF_VINYL);
+                    } elseif (preg_match('/.*KZ.*|.*MC.*/', $subfield)) {
+                        return array(self::VNF_ALBUM, self::VNF_SOUND_CASSETTE);
+                    } elseif (preg_match('/.*GD.*/', $subfield)) {
+                        return array(self::VNF_ALBUM, self::VNF_SHELLAC);
+                    }  
+                }
+            }
+        }
+        return $formats;
+    }
 }

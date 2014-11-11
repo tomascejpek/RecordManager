@@ -28,9 +28,9 @@ class KjmMarcRecord extends VnfMarcRecord
         parent::__construct($data, $oaiID, $source);
     }
 
-    public function getFormat() {
+    public function getFormat($keepRemove = false) {
         $prefix = substr($this->getID(), 0, 2);
-        $formats = array();
+        $formats = parent::getFormat($keepRemove);
         if (strcasecmp($prefix, 'CD') ===  0) {
             $field = $this->getField('245');
             if ($field && ($subfield = $this->getSubfield($field, 'h'))) {
@@ -41,8 +41,14 @@ class KjmMarcRecord extends VnfMarcRecord
                 }
             }
         }
+        
+        //replace wrong dected magnetic tapes
+        if (in_array(self::VNF_MAGNETIC_TAPE, $formats)) {
+            $formats = array(self::VNF_CD);
+        }
+        
         if (strcasecmp($prefix, 'SK') != 0) {
-            $formats[] = 'vnf_album';
+            $formats[] = self::VNF_ALBUM;
         }
         $formats[] = $prefix;
         $formats = $this->unifyFormats($formats);

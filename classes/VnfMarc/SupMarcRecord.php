@@ -61,23 +61,9 @@ class SupMarcRecord extends VnfMarcRecord
             unset($data['institutionAlbumsOnly']);
         }
  
-        $fields = $this->getFields('LKR');
-        if (is_array($fields)) {    
-            $prefix = isset($this->settings['idPrefix']) ? $this->settings['idPrefix'] : $this->settings['format'];
-            if (substr($prefix, -1) != '.') {
-                $prefix .= '.';
-            }
-            foreach ($fields as $field) {
-                $type = $this->getSubfield($field, 'a');
-                if ($type == 'UP') {
-                    $data['sup_uplink'] = isset($data['sup_uplink']) ? $data['sup_uplink'] : array();
-                    $data['sup_uplink'][] = $prefix . $this->getSubfield($field, 'b'); 
-                } else if ($type == 'DOWN') {
-                    $data['sup_downlinks'] = isset($data['sup_downlinks']) ? $data['sup_downlinks'] : array();
-                    $data['sup_downlinks'][] = $prefix . $this->getSubfield($field, 'b');
-                }
-            }
-        }
+        $hierarchyLinks = $this->getHierarchLinks();
+        $data['sup_uplink'] = $hierarchyLinks['sup_uplink'];
+        $data['sup_downlinks'] = $hierarchyLinks['sup_downlinks'];
 	
 	if ($this->isAlbum()) {
 	    $path = $this->getImagePath(ltrim($this->getID(), '0'));
@@ -91,7 +77,7 @@ class SupMarcRecord extends VnfMarcRecord
                     }
                     
                     if (file_exists($labelsDir . $path)) {
-                        $data['label_path_str'] = $path;
+                        $data['label_path_str_mv'] = $path;
                     }
                 }
             }
@@ -100,18 +86,46 @@ class SupMarcRecord extends VnfMarcRecord
         return $data;
     }
     
-    public function getFormat() {
+    public function getFormat($keepRemove = false) {
         $formats = array();
         $field = $this->getField('FCT');
         if ($field) {
             $subA = $this->getSubfield($field, 'a');
             $formats[] = $subA;
         }
+        
         if (count($formats) == 0) {
-            $formats[] = 'vnf_unspecified';
+            $pubNo = $this->getFieldsSubfields(array(array(MarcRecord::GET_BOTH, '028', array('a'))), false, true);
+            if (is_array($pubNo) && count($pubNo) > 0) {
+                $end = substr($pubNo[0], -2);
+                switch ($end) {
+                    case '-2': $formats[] = self::VNF_CD; break;
+                    case '-4': $formats[] = self::VNF_SOUND_CASSETTE; break;
+                    case '-1': 
+                    case '-7':
+                    case '-M': $formats[] = self::VNF_VINYL; break;
+                    case '-V': $formats[] = self::VNF_SHELLAC; break;
+                    
+                }
+            }
         }
-        $formats[] = $this->isAlbum() ? 'vnf_album' : 'vnf_track';
-        return $formats;
+        
+        if (count($formats) == 0) {
+            if (is_array($pubNo) && count($pubNo) > 0) {
+                $begin = substr(ltrim($pubNo[0]), 0, 2);
+                if ($begin == '0 ' || $begin == '1 ') {
+                    $formats[] = self::VNF_VINYL;
+                }
+            }
+            
+        }
+        
+        if (count($formats) == 0) {
+            $formats[] = self::VNF_DATA;
+        }
+        
+        $formats[] = $this->isAlbum() ? self::VNF_ALBUM : self::VNF_TRACK;
+        return $this->unifyFormats($formats, $keepRemove);
     }
     
     public function getSpecialRecordType() {
@@ -136,4 +150,60 @@ class SupMarcRecord extends VnfMarcRecord
         return $part;
     }
 
+    
+    protected function getTOC()
+    {
+        if (!$this->isAlbum()) {
+            return '';
+        }
+        
+        $hierarchyLinks = $this->getHierarchLinks();
+        $fields = $this->getFields('505');
+        if (count($hierarchyLinks['sup_downlinks']) != count($fields)) {
+            global $logger;
+            $logger->log('getTOC', "Supraphon links-content mismatch in record " . $this->getID(), Logger::WARNING);
+            return '';
+        }
+        
+        $result = array();
+        for ($i = 0; $i < count($fields); $i++) {
+            $result[$i] = '';
+            foreach ($fields[$i]['s'] as $subfield) {
+                foreach ($subfield as $code => $value) {
+                    $result[$i] .= '$' . $code . $value;
+                }
+            }
+            $result[$i] .= '$x' . $hierarchyLinks['sup_downlinks'][$i]; 
+        }
+        
+        $concat = implode(self::VNF_CONTENTS_SEPARATOR, $result);
+        if (!empty($concat)) {
+            $concat = 'vnf_sup:' . $concat;
+        }
+        return $concat;
+    }
+    
+    protected function getHierarchLinks() {
+        $result = array();
+        $result['sup_downlinks'] = array();
+        $result['sup_uplink'] = array();
+        $fields = $this->getFields('LKR');
+        if (is_array($fields)) {
+            $prefix = isset($this->settings['idPrefix']) ? $this->settings['idPrefix'] : $this->settings['format'];
+            if (substr($prefix, -1) != '.') {
+                $prefix .= '.';
+            }
+            foreach ($fields as $field) {
+                $type = $this->getSubfield($field, 'a');
+                if ($type == 'UP') {
+                    $result['sup_uplink'][] = $prefix . $this->getSubfield($field, 'b');
+                } elseif ($type == 'DOWN') {
+                    $result['sup_downlinks'][] = $prefix . $this->getSubfield($field, 'b');
+                }
+            }
+        }
+        return $result;
+    }
+    
+    
 }

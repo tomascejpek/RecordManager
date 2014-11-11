@@ -61,10 +61,37 @@ class KtnMarcRecord extends VnfMarcRecord
             if ($subfields) {
                 $concat = implode('__', $subfields);
                 //filter records in brail
-                return !preg_match('/.*brail.*/i', $concat);
+                return !(preg_match('/.*brail.*/i', $concat) || preg_match('/.*hmat.*/i', $concat));
             } 
         }
         return true;
+    }
+    
+    public function getFormat($keepRemove = false) {
+        $formats = parent::getFormat($keepRemove);
+        $field = $this->getField('300');
+        if ($field) {
+            $subfields = $this->getAllSubfields($field);
+            if ($subfields) {
+                $concat = implode('__', $subfields);
+                if (preg_match('/.*obsahuje\s+CD.*/i', $concat)) {
+                    return $this->mergeAndUnify($formats, self::VNF_CD);
+                }
+            }
+        }
+        
+        $field = $this->getField('245');
+        if ($field) {
+            $subfields = $this->getAllSubfields($field);
+            if ($subfields) {
+                $concat = implode('__', $subfields);
+                if (preg_match('/.*elektronick.\s+zdroj.*/i', $concat)) {
+                    return $this->mergeAndUnify($formats, self::VNF_DATA);
+                }
+            }
+        }
+        
+        return $formats;
     }
 
     protected function parseLineMarc($marc) {
