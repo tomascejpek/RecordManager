@@ -507,7 +507,8 @@ class VnfMarcRecord extends PortalsCommonMarcRecord
     protected function mergeAndUnify($formats, $newFormats, $keepRemove = false) {
         //check for occasional bug - cassettes and vinyls are already recognized as CD from field 007
         //in that case CD format is ignored
-        if (!empty(array_intersect(is_array($newFormats) ? $newFormats : array($newFormats), $this->overwrittenFields))) {
+        $overwrittenIntersect = array_intersect(is_array($newFormats) ? $newFormats : array($newFormats), $this->overwrittenFields);
+        if (!empty($overwrittenIntersect)) {
             if (in_array(self::VNF_CD, $formats)) {
                 $formats = array_diff($formats, array(self::VNF_CD));
             }
