@@ -47,12 +47,25 @@ class KjmMarcRecord extends VnfMarcRecord
             $formats = array(self::VNF_CD);
         }
         
-        if (strcasecmp($prefix, 'SK') != 0) {
+        if (!$this->isTrack()) {
             $formats[] = self::VNF_ALBUM;
         }
         $formats[] = $prefix;
         $formats = $this->unifyFormats($formats);
         return $formats;
+    }
+
+    public function toSolrArray() {
+        $data = parent::toSolrArray();
+        if ($this->isTrack()) {
+            unset($data['institutionAlbumsOnly']);
+        }
+        return $data;
+    }
+    
+    public function isTrack() {
+        $prefix = substr($this->getID(), 0, 2);
+        return strcasecmp($prefix, 'SK') == 0;
     }
     
 }
