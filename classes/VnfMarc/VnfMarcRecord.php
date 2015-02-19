@@ -55,6 +55,7 @@ class VnfMarcRecord extends PortalsCommonMarcRecord
     const VNF_AUDIO_DOCS     = 'vnf_audio_documents';
     const VNF_MAGNETIC_TAPE  = 'vnf_magneticTape';
     const VNF_DATA           = 'vnf_data';
+    const VNF_PHONOGRAPH     = 'vnf_phonograph_cylinder';
     
     const VNF_CONTENTS_SEPARATOR = "--!--";
 
