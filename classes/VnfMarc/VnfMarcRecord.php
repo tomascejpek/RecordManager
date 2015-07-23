@@ -219,6 +219,8 @@ class VnfMarcRecord extends PortalsCommonMarcRecord
                     $data['url_fct_txtF_mv'][] = preg_match('/.*public.*/', $data['url'][$i]) ? 'kramerius_public' : 'kramerius';
                 } elseif (preg_match('/.*supraphonline.*/', $data['url'][$i])) {
                     $data['url_fct_txtF_mv'][] = 'supraphon';
+                } elseif (preg_match('/.*radioteka.*/', $data['url'][$i])) {
+                    $data['url_fct_txtF_mv'][] = 'radioteka';
                 } else {
                     $data['url_fct_txtF_mv'][] = 'other';
                 } 
