@@ -1249,7 +1249,7 @@ class MarcRecord extends BaseRecord
        $namespace = '';
        if (is_array($namespaces)) {
            foreach ($namespaces as $name => $url) {
-               if (preg_match('/.*marc.*/i', $name)) {
+               if (preg_match('/.*marc.*/i', $name) || preg_match('/.*m.*/i', $name)) {
                    $document->registerXPathNamespace($name, $url);
                    $namespace = $name.':';
                    break;
