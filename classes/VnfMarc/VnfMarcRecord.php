@@ -235,7 +235,15 @@ class VnfMarcRecord extends PortalsCommonMarcRecord
             $data['format'] = array_diff($data['format'], array(self::VNF_AUDIO_DOCS));
             //track cannot have other format
             if (in_array(self::VNF_TRACK, $data['format'])) {
-                $data['format'] = array(self::VNF_TRACK);
+                $data['album_track_str'] = self::VNF_TRACK;
+                $data['format'] = array();
+            }
+            elseif (in_array(self::VNF_ALBUM, $data['format'])){
+                $data['album_track_str'] = self::VNF_ALBUM;
+                $data['format'] = array_diff($data['format'], array(self::VNF_ALBUM));
+                if (in_array('remove', $data['format'])){
+                    $data['format'] = array_diff($data['format'], array('remove'));
+                }
             }
         }
         
