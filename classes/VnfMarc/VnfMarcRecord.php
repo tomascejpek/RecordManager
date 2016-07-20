@@ -495,7 +495,7 @@ class VnfMarcRecord extends PortalsCommonMarcRecord
             }
             if (!array_key_exists($format, $unificationArray)) {
                 $logger->log('unifyVNFFormats', "No mapping found for: $format \t", Logger::WARNING);
-                $unified[] = 'unmapped_' . $format;
+//                 $unified[] = 'unmapped_' . $format;
             } else {
                 if ($unificationArray[$format] == 'ignore') {
                     continue;
