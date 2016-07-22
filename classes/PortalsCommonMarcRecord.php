@@ -371,7 +371,11 @@ class PortalsCommonMarcRecord extends MarcRecord
     	if($content) {
     		$content = rtrim($content);
     		if ($content[strlen($content) -1] == '<') {
-    			$xml = preg_replace('/<record.*>/', '<record>', $xml);
+    			$xml = preg_replace('/<record[^>]*>/', '<record>', $xml);
+    			if(strpos('<record>', $xml) === false) {
+    				$xml = preg_replace('/<collection[^>]*>/', '', $xml);
+    				$xml = preg_replace('/<\/collection>/', '', $xml);
+    			}
     		}
     	}
     	return parent::parseXML($xml);
