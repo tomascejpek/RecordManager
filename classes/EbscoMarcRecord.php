@@ -3,7 +3,7 @@
 require_once 'PortalMarc/MappablePortalMarcRecord.php';
 
 /**
- * MarcRecord Class - local customization for cistbrno
+ * MarcRecord Class - local customization for vnf
  *
  * This is a class for processing MARC records.
  *

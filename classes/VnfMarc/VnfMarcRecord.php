@@ -69,7 +69,7 @@ class VnfMarcRecord extends PortalsCommonMarcRecord
             throw new Exception("No institution name set for datasource: $this->source");
         }
         
-        //check for CistBrno settings
+        //check for vnf settings
         global $configArray;
         if (!$configArray['VNF']['format_unification_array']) {
             throw new Exception("No format unification for VNF");

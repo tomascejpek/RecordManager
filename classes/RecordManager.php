@@ -139,11 +139,6 @@ class RecordManager
         // Read the artices file
         MetadataUtils::$articles = isset($configArray['Site']['articles']) 
             ? $this->readListFile($configArray['Site']['articles']) : array();
-            
-        // Read settings for CistBrno
-        if ($configArray['CistBrno'] && $configArray['CistBrno']['format_unification']) {
-        	$configArray['CistBrno']['format_unification_array'] = parse_ini_file($configArray['CistBrno']['format_unification']);
-        }
 
         // Read settings for VNF
         if ($configArray['VNF'] && $configArray['VNF']['format_unification']) {
@@ -2163,6 +2158,6 @@ class RecordManager
         //skipped matching througn solrUpdater
         $intersect = array_uintersect($origFormat, $cFormat, 'strcasecmp'); 
         //either both or any are in brail
-        return count($intersect) > 0 && in_array('cistbrno_books_in_braill', $first) === in_array('cistbrno_books_in_braill', $second);  
+        return count($intersect) > 0 && in_array('vnf_books_in_braill', $first) === in_array('vnf_books_in_braill', $second);
     }
 }

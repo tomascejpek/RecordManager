@@ -5,7 +5,7 @@ require_once 'MetadataUtils.php';
 require_once 'Logger.php';
 
 /**
- * MarcRecord Class - common class for cistbrno
+ * MarcRecord Class - common class for vnf
  *
  * This is a class for processing MARC records.
  *
